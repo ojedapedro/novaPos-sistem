@@ -77,6 +77,24 @@ export interface SaleDetail {
   subtotal: number;
 }
 
+export interface PurchaseHeader {
+  id: string;
+  date: string;
+  supplierId: string;
+  total: number;
+  currency: string;
+  reference: string;
+  status: string; // 'Completada'
+}
+
+export interface PurchaseDetail {
+  purchaseId: string;
+  productId: string;
+  quantity: number;
+  costUnit: number;
+  subtotal: number;
+}
+
 export interface CashMovement {
   id: string;
   date: string;

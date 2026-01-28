@@ -3,5 +3,5 @@
 // Pasos: En el editor de Apps Script -> Implementar -> Nueva implementación -> Web App -> Acceso: Cualquiera
 export const API_CONFIG = {
   // Ejemplo: 'https://script.google.com/macros/s/AKfycbx.../exec'
-  GOOGLE_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbxCebP7bMu_LTzEV16hKipAh5Ibi9CWPESouv2x69zZ8s7eWE60PXgFLO-0wUdwgMss/exec' 
+  GOOGLE_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbxPKIbrapPUFSwHXMbbI-pj4dPy6D03DvFI9u54ESfovQKLgJkvI19kqS73PXFV93mB/exec' 
 };

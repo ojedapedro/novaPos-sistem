@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Search, Plus, Minus, Trash2, Truck, X, Check, Save, FileText, Calendar, Filter, UserPlus, Phone, CreditCard } from 'lucide-react';
-import { Product, PurchaseItem, Supplier, PaymentMethod, TransactionType, TransactionOrigin, ExchangeRate, CashMovement } from '../types';
+import { Search, Plus, Minus, Trash2, Truck, X, Check, Save, FileText, Calendar, Filter, UserPlus, Phone, CreditCard, Eye, Package } from 'lucide-react';
+import { Product, PurchaseItem, Supplier, PaymentMethod, TransactionType, TransactionOrigin, ExchangeRate, CashMovement, PurchaseHeader, PurchaseDetail } from '../types';
 import { DataService } from '../services/dataService';
 import { ProductFormModal } from '../components/ProductFormModal';
 
@@ -29,15 +29,19 @@ export const Purchases: React.FC<PurchasesProps> = ({ exchangeRate }) => {
   const [newSupplier, setNewSupplier] = useState({ name: '', phone: '', paymentType: 'Contado' });
 
   // --- Report Logic ---
-  const [allMovements, setAllMovements] = useState<CashMovement[]>([]);
+  const [purchases, setPurchases] = useState<PurchaseHeader[]>([]);
+  const [purchaseDetails, setPurchaseDetails] = useState<PurchaseDetail[]>([]);
   const [filterSupplier, setFilterSupplier] = useState<string>('ALL');
-  // Default to first day of current month
   const [startDate, setStartDate] = useState<string>(new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]);
   const [endDate, setEndDate] = useState<string>(new Date().toISOString().split('T')[0]);
 
+  // --- Detail Modal State ---
+  const [selectedPurchaseId, setSelectedPurchaseId] = useState<string | null>(null);
+
   useEffect(() => {
     setProducts(DataService.getProducts());
-    setAllMovements(DataService.getMovements());
+    setPurchases(DataService.getPurchases());
+    setPurchaseDetails(DataService.getPurchaseDetails());
     const loadedSuppliers = DataService.getSuppliers();
     setSuppliers(loadedSuppliers);
     if (loadedSuppliers.length > 0) {
@@ -57,35 +61,37 @@ export const Purchases: React.FC<PurchasesProps> = ({ exchangeRate }) => {
   const purchaseReport = useMemo(() => {
     const start = new Date(startDate);
     const end = new Date(endDate);
-    end.setHours(23, 59, 59); // Include full end day
+    end.setHours(23, 59, 59);
 
-    const filtered = allMovements.filter(m => {
-        const mDate = new Date(m.date);
-        const isPurchase = m.type === TransactionType.EGRESO && m.origin === TransactionOrigin.COMPRA;
-        const inDateRange = mDate >= start && mDate <= end;
-        
-        // Filter logic: If ALL, match everything. If specific ID, match exact supplierId.
-        const matchesSupplier = filterSupplier === 'ALL' || m.supplierId === filterSupplier;
-
-        return isPurchase && inDateRange && matchesSupplier;
+    const filtered = purchases.filter(p => {
+        const pDate = new Date(p.date);
+        const inDateRange = pDate >= start && pDate <= end;
+        const matchesSupplier = filterSupplier === 'ALL' || p.supplierId === filterSupplier;
+        return inDateRange && matchesSupplier;
     });
 
-    const totalSpentUSD = filtered.reduce((acc, curr) => acc + toUSD(curr.amount, curr.currency), 0);
+    const totalSpentUSD = filtered.reduce((acc, curr) => acc + toUSD(curr.total, curr.currency), 0);
     
     return {
-        movements: filtered.reverse(),
+        purchases: filtered.reverse(),
         totalSpentUSD,
         count: filtered.length
     };
-  }, [allMovements, filterSupplier, startDate, endDate, exchangeRate]);
+  }, [purchases, filterSupplier, startDate, endDate, exchangeRate]);
 
-  // Label for UI
   const currentSupplierLabel = useMemo(() => {
       if (filterSupplier === 'ALL') return '(Todos)';
       const s = suppliers.find(sup => sup.id === filterSupplier);
       return s ? `(${s.name})` : '(Desconocido)';
   }, [filterSupplier, suppliers]);
 
+  // --- Get details for selected purchase ---
+  const selectedDetails = useMemo(() => {
+      if (!selectedPurchaseId) return [];
+      return purchaseDetails.filter(d => d.purchaseId === selectedPurchaseId);
+  }, [selectedPurchaseId, purchaseDetails]);
+
+  const getProductName = (id: string) => products.find(p => p.id === id)?.name || id;
 
   // --- New Purchase Processing ---
   const filteredProducts = useMemo(() => {
@@ -132,40 +138,35 @@ export const Purchases: React.FC<PurchasesProps> = ({ exchangeRate }) => {
 
   const handleCreateProduct = (product: Product) => {
       DataService.updateProduct(product);
-      setProducts(DataService.getProducts()); // Refresh list
+      setProducts(DataService.getProducts());
       setIsProductModalOpen(false);
-      // Auto add to cart for convenience
       addToCart(product);
   };
 
   const handleCreateSupplier = () => {
     if (!newSupplier.name.trim()) return alert("El nombre del proveedor es obligatorio");
-    
     const supplier: Supplier = {
         id: `S${Date.now()}`,
         name: newSupplier.name,
         phone: newSupplier.phone,
         paymentType: newSupplier.paymentType as 'Contado' | 'Crédito'
     };
-
     DataService.saveSupplier(supplier);
     setSuppliers(DataService.getSuppliers());
-    setSelectedSupplier(supplier.id); // Select new supplier
+    setSelectedSupplier(supplier.id);
     setIsSupplierModalOpen(false);
-    setNewSupplier({ name: '', phone: '', paymentType: 'Contado' }); // Reset form
+    setNewSupplier({ name: '', phone: '', paymentType: 'Contado' });
   };
 
   const cartTotalUSD = cart.reduce((sum, item) => sum + (item.newCost * item.quantity), 0);
   
   const processPurchase = () => {
     if (cart.length === 0) return;
-    if (!selectedSupplier) {
-        alert("Seleccione un proveedor");
-        return;
-    }
+    if (!selectedSupplier) return alert("Seleccione un proveedor");
 
     const supplierName = suppliers.find(s => s.id === selectedSupplier)?.name || 'Proveedor';
 
+    // Create movement for cash flow
     const movementId = `M${Date.now()}`;
     const newMovement = {
         id: movementId,
@@ -176,16 +177,17 @@ export const Purchases: React.FC<PurchasesProps> = ({ exchangeRate }) => {
         amount: cartTotalUSD,
         currency: 'USD',
         reference: `${supplierName} - ${reference}`,
-        supplierId: selectedSupplier // Link to supplier for reporting
+        supplierId: selectedSupplier
     };
 
+    // Save purchase logic now handles creation of PurchaseHeader and Details internally
     DataService.savePurchase(cart, newMovement);
     
-    // Reset
     setCart([]);
     setIsModalOpen(false);
     setProducts(DataService.getProducts());
-    setAllMovements(DataService.getMovements()); // Refresh report data immediately
+    setPurchases(DataService.getPurchases()); // Refresh list
+    setPurchaseDetails(DataService.getPurchaseDetails());
     setReference('');
     alert("Compra registrada.");
   };
@@ -212,7 +214,7 @@ export const Purchases: React.FC<PurchasesProps> = ({ exchangeRate }) => {
 
       {activeTab === 'new' ? (
           <div className="flex flex-1 overflow-hidden">
-            {/* Product Catalog */}
+             {/* Left Column: Product Catalog */}
             <div className="w-2/3 p-6 overflow-y-auto custom-scrollbar">
                 <div className="mb-4 flex justify-between items-start">
                     <div>
@@ -269,7 +271,7 @@ export const Purchases: React.FC<PurchasesProps> = ({ exchangeRate }) => {
                 </div>
             </div>
 
-            {/* Purchase Cart Sidebar */}
+            {/* Right Column: Cart */}
             <div className="w-1/3 bg-white border-l border-gray-200 flex flex-col h-full shadow-xl">
                 <div className="p-5 border-b border-gray-100 bg-gray-50">
                 <div className="flex items-center justify-between mb-4">
@@ -321,14 +323,11 @@ export const Purchases: React.FC<PurchasesProps> = ({ exchangeRate }) => {
                         </div>
                         
                         <div className="flex items-center justify-between gap-2">
-                            {/* Quantity Controls */}
                             <div className="flex items-center gap-2 bg-white rounded border border-gray-200 p-1">
                                 <button type="button" onClick={() => updateQuantity(item.id, -1)} className="p-1 hover:bg-gray-100 rounded text-gray-600"><Minus size={12} /></button>
                                 <span className="text-sm font-semibold w-6 text-center">{item.quantity}</span>
                                 <button type="button" onClick={() => updateQuantity(item.id, 1)} className="p-1 hover:bg-gray-100 rounded text-gray-600"><Plus size={12} /></button>
                             </div>
-
-                            {/* Cost Input */}
                             <div className="flex items-center gap-2">
                                 <span className="text-xs text-gray-500">Costo $</span>
                                 <input 
@@ -365,29 +364,17 @@ export const Purchases: React.FC<PurchasesProps> = ({ exchangeRate }) => {
                 </button>
                 </div>
             </div>
-        </div>
+          </div>
       ) : (
           <div className="p-6 flex-1 overflow-y-auto custom-scrollbar animate-fade-in">
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
                   <h2 className="text-2xl font-bold text-gray-800">Reporte de Compras</h2>
-                  
-                  {/* Filters */}
                   <div className="flex flex-wrap items-center gap-3 bg-white p-2 rounded-xl shadow-sm border border-gray-200">
                       <div className="flex items-center gap-2 px-2 border-r border-gray-200">
                           <Calendar size={18} className="text-gray-400" />
-                          <input 
-                              type="date" 
-                              className="text-sm text-gray-600 outline-none" 
-                              value={startDate}
-                              onChange={(e) => setStartDate(e.target.value)}
-                          />
+                          <input type="date" className="text-sm text-gray-600 outline-none" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
                           <span className="text-gray-400">-</span>
-                          <input 
-                              type="date" 
-                              className="text-sm text-gray-600 outline-none"
-                              value={endDate}
-                              onChange={(e) => setEndDate(e.target.value)}
-                          />
+                          <input type="date" className="text-sm text-gray-600 outline-none" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
                       </div>
                       <div className="flex items-center gap-2 px-2">
                           <Filter size={18} className="text-gray-400" />
@@ -397,9 +384,7 @@ export const Purchases: React.FC<PurchasesProps> = ({ exchangeRate }) => {
                               onChange={(e) => setFilterSupplier(e.target.value)}
                           >
                               <option value="ALL">Todos los Proveedores</option>
-                              {suppliers.map(s => (
-                                  <option key={s.id} value={s.id}>{s.name}</option>
-                              ))}
+                              {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                           </select>
                       </div>
                   </div>
@@ -413,70 +398,67 @@ export const Purchases: React.FC<PurchasesProps> = ({ exchangeRate }) => {
                           <h3 className="text-3xl font-bold text-gray-800">${purchaseReport.totalSpentUSD.toFixed(2)}</h3>
                           <p className="text-xs text-gray-400 mt-1">Estimado en USD</p>
                       </div>
-                      <div className="p-4 bg-red-50 text-red-600 rounded-lg">
-                          <Truck size={28} />
-                      </div>
+                      <div className="p-4 bg-red-50 text-red-600 rounded-lg"><Truck size={28} /></div>
                   </div>
                   <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 flex items-center justify-between">
                       <div>
                           <p className="text-sm font-medium text-gray-500 mb-1">Transacciones</p>
                           <h3 className="text-3xl font-bold text-gray-800">{purchaseReport.count}</h3>
-                          <p className="text-xs text-green-600 mt-1 font-medium">Registros encontrados</p>
+                          <p className="text-xs text-green-600 mt-1 font-medium">Compras realizadas</p>
                       </div>
-                      <div className="p-4 bg-blue-50 text-blue-600 rounded-lg">
-                          <FileText size={28} />
-                      </div>
+                      <div className="p-4 bg-blue-50 text-blue-600 rounded-lg"><FileText size={28} /></div>
                   </div>
               </div>
 
               {/* Detail Table */}
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                   <div className="p-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
-                      <h3 className="font-semibold text-gray-700">Detalle de Operaciones</h3>
+                      <h3 className="font-semibold text-gray-700">Historial de Compras</h3>
                   </div>
                   <table className="w-full text-left">
                       <thead className="bg-white text-gray-500 font-medium text-xs uppercase border-b border-gray-100">
                           <tr>
                               <th className="px-6 py-4">Fecha</th>
-                              <th className="px-6 py-4">Proveedor / Referencia</th>
-                              <th className="px-6 py-4">Método Pago</th>
-                              <th className="px-6 py-4 text-right">Monto</th>
+                              <th className="px-6 py-4">Proveedor</th>
+                              <th className="px-6 py-4">Referencia</th>
+                              <th className="px-6 py-4 text-right">Total</th>
+                              <th className="px-6 py-4 text-center">Detalle</th>
                           </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-50">
-                          {purchaseReport.movements.length === 0 ? (
+                          {purchaseReport.purchases.length === 0 ? (
                               <tr>
-                                  <td colSpan={4} className="px-6 py-12 text-center text-gray-400">
-                                      No se encontraron compras en este periodo con los filtros seleccionados.
+                                  <td colSpan={5} className="px-6 py-12 text-center text-gray-400">
+                                      No se encontraron compras en este periodo.
                                   </td>
                               </tr>
                           ) : (
-                            purchaseReport.movements.map(mov => {
-                                const supplierName = suppliers.find(s => s.id === mov.supplierId)?.name || 'Desconocido';
+                            purchaseReport.purchases.map(purch => {
+                                const supplierName = suppliers.find(s => s.id === purch.supplierId)?.name || 'Desconocido';
                                 return (
-                                    <tr key={mov.id} className="hover:bg-gray-50 transition-colors">
+                                    <tr key={purch.id} className="hover:bg-gray-50 transition-colors">
                                         <td className="px-6 py-4 text-sm text-gray-600">
-                                            {new Date(mov.date).toLocaleDateString()}
-                                            <div className="text-xs text-gray-400">{new Date(mov.date).toLocaleTimeString()}</div>
+                                            {new Date(purch.date).toLocaleDateString()}
+                                            <div className="text-xs text-gray-400">{new Date(purch.date).toLocaleTimeString()}</div>
                                         </td>
-                                        <td className="px-6 py-4">
-                                            <div className="font-medium text-gray-800">{supplierName}</div>
-                                            <div className="text-xs text-gray-500 truncate max-w-[200px]">{mov.reference}</div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <span className="px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
-                                                {mov.method}
-                                            </span>
-                                        </td>
+                                        <td className="px-6 py-4 font-medium text-gray-800">{supplierName}</td>
+                                        <td className="px-6 py-4 text-sm text-gray-500">{purch.reference || '-'}</td>
                                         <td className="px-6 py-4 text-right">
                                             <div className="font-bold text-gray-800">
-                                                {mov.amount.toFixed(2)} <span className="text-xs font-normal text-gray-500">{mov.currency}</span>
+                                                {purch.total.toFixed(2)} <span className="text-xs font-normal text-gray-500">{purch.currency}</span>
                                             </div>
-                                            {mov.currency !== 'USD' && (
-                                                <div className="text-xs text-gray-400">
-                                                    ~${toUSD(mov.amount, mov.currency).toFixed(2)}
-                                                </div>
+                                            {purch.currency !== 'USD' && (
+                                                <div className="text-xs text-gray-400">~${toUSD(purch.total, purch.currency).toFixed(2)}</div>
                                             )}
+                                        </td>
+                                        <td className="px-6 py-4 text-center">
+                                            <button 
+                                                onClick={() => setSelectedPurchaseId(purch.id)}
+                                                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                title="Ver Productos"
+                                            >
+                                                <Eye size={18} />
+                                            </button>
                                         </td>
                                     </tr>
                                 );
@@ -493,7 +475,7 @@ export const Purchases: React.FC<PurchasesProps> = ({ exchangeRate }) => {
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center animate-fade-in">
           <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl">
             <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-              <h2 className="text-lg font-bold text-gray-800">Confirmar Egreso</h2>
+              <h2 className="text-lg font-bold text-gray-800">Confirmar Compra</h2>
               <button type="button" onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600"><X size={24} /></button>
             </div>
             
@@ -598,6 +580,59 @@ export const Purchases: React.FC<PurchasesProps> = ({ exchangeRate }) => {
                   </div>
               </div>
           </div>
+      )}
+
+      {/* Purchase Details Modal */}
+      {selectedPurchaseId && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center animate-fade-in">
+            <div className="bg-white rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl max-h-[90vh] flex flex-col">
+                <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                    <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                        <Package size={20} className="text-blue-600"/>
+                        Detalle de Compra
+                    </h2>
+                    <button onClick={() => setSelectedPurchaseId(null)} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
+                </div>
+                
+                <div className="p-6 overflow-y-auto custom-scrollbar">
+                    <div className="mb-4 text-sm text-gray-500">
+                        ID Compra: <span className="font-mono text-gray-700">{selectedPurchaseId}</span>
+                    </div>
+                    <table className="w-full text-left border-collapse">
+                        <thead className="bg-gray-50 text-gray-600 font-medium text-xs uppercase border-b border-gray-100">
+                            <tr>
+                                <th className="px-4 py-3">Producto</th>
+                                <th className="px-4 py-3 text-center">Cant.</th>
+                                <th className="px-4 py-3 text-right">Costo Unit.</th>
+                                <th className="px-4 py-3 text-right">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-50">
+                            {selectedDetails.map((detail, idx) => (
+                                <tr key={idx} className="hover:bg-gray-50">
+                                    <td className="px-4 py-3 font-medium text-gray-800">{getProductName(detail.productId)}</td>
+                                    <td className="px-4 py-3 text-center">{detail.quantity}</td>
+                                    <td className="px-4 py-3 text-right">${detail.costUnit.toFixed(2)}</td>
+                                    <td className="px-4 py-3 text-right font-bold text-gray-700">${detail.subtotal.toFixed(2)}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                        <tfoot className="bg-gray-50 border-t border-gray-200">
+                            <tr>
+                                <td colSpan={3} className="px-4 py-3 text-right font-bold text-gray-800">Total</td>
+                                <td className="px-4 py-3 text-right font-bold text-blue-600">
+                                    ${selectedDetails.reduce((sum, d) => sum + d.subtotal, 0).toFixed(2)}
+                                </td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                
+                <div className="p-5 border-t border-gray-100 flex justify-end bg-gray-50">
+                    <button onClick={() => setSelectedPurchaseId(null)} className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">Cerrar</button>
+                </div>
+            </div>
+        </div>
       )}
 
       {/* Product Creation Modal (Reused) */}

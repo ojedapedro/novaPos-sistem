@@ -1,4 +1,4 @@
-import { Product, Client, SaleHeader, SaleDetail, CashMovement, SaleType, SaleStatus, TransactionType, TransactionOrigin, PaymentMethod, Supplier } from '../types';
+import { Product, Client, SaleHeader, SaleDetail, CashMovement, SaleType, SaleStatus, TransactionType, TransactionOrigin, PaymentMethod, Supplier, PurchaseHeader, PurchaseDetail } from '../types';
 
 export const INITIAL_PRODUCTS: Product[] = [
   { id: 'P001', name: 'Harina de Maíz 1kg', category: 'Alimentos', priceBuy: 0.8, priceSell: 1.2, stock: 150, minStock: 20, active: true },
@@ -40,6 +40,16 @@ export const INITIAL_DETAILS: SaleDetail[] = [
   { saleId: 'V003', productId: 'P003', quantity: 10, priceUnit: 3.5, subtotal: 35.0 },
 ];
 
+export const INITIAL_PURCHASES: PurchaseHeader[] = [
+    { id: 'C001', date: yesterday.toISOString(), supplierId: 'S002', total: 120.0, currency: 'USD', reference: 'Restock Arroz', status: 'Completada' },
+    { id: 'C002', date: today.toISOString(), supplierId: 'S001', total: 500.0, currency: 'BS', reference: 'Pago Transporte', status: 'Completada' }
+];
+
+export const INITIAL_PURCHASE_DETAILS: PurchaseDetail[] = [
+    { purchaseId: 'C001', productId: 'P002', quantity: 100, costUnit: 1.2, subtotal: 120.0 },
+    { purchaseId: 'C002', productId: 'P001', quantity: 10, costUnit: 50.0, subtotal: 500.0 } // Approx BS calculation in mock
+];
+
 export const INITIAL_MOVEMENTS: CashMovement[] = [
   // Movimiento de Ayer
   { id: 'M001', date: yesterday.toISOString(), type: TransactionType.INGRESO, origin: TransactionOrigin.VENTA, method: PaymentMethod.EFECTIVO_USD, amount: 15.5, currency: 'USD' },
@@ -51,7 +61,7 @@ export const INITIAL_MOVEMENTS: CashMovement[] = [
   // Movimientos de Hoy (Venta V003 - Zelle)
   { id: 'M004', date: today.toISOString(), type: TransactionType.INGRESO, origin: TransactionOrigin.VENTA, method: PaymentMethod.ZELLE, amount: 45.0, currency: 'USD', reference: 'ZL-998877' },
 
-  // Movimientos de Compra (Egresos) con supplierId para pruebas de filtro
+  // Movimientos de Compra (Egresos) - Linked to purchases conceptually
   { id: 'M005', date: today.toISOString(), type: TransactionType.EGRESO, origin: TransactionOrigin.COMPRA, method: PaymentMethod.EFECTIVO_BS, amount: 500.0, currency: 'BS', reference: 'Pago Transporte', supplierId: 'S001' },
   { id: 'M006', date: yesterday.toISOString(), type: TransactionType.EGRESO, origin: TransactionOrigin.COMPRA, method: PaymentMethod.ZELLE, amount: 120.0, currency: 'USD', reference: 'Restock Arroz', supplierId: 'S002' }
 ];
