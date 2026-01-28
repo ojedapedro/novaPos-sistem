@@ -139,5 +139,12 @@ export const DataService = {
 
     // Sync to Cloud
     ApiService.sendAction('SYNC_INVENTORY', product);
+  },
+
+  addSupplier: (supplier: Supplier) => {
+    const newSuppliers = [...cache.suppliers, supplier];
+    updateLocal(STORAGE_KEYS.SUPPLIERS, newSuppliers, 'suppliers');
+    // En el futuro, agregar sincronización con nube:
+    // ApiService.sendAction('SAVE_SUPPLIER', supplier);
   }
 };

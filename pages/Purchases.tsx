@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Search, Plus, Minus, Trash2, Truck, X, Check, Save, FileText, Calendar, Filter } from 'lucide-react';
+import { Search, Plus, Minus, Trash2, Truck, X, Check, Save, FileText, Calendar, Filter, UserPlus, Phone, CreditCard } from 'lucide-react';
 import { Product, PurchaseItem, Supplier, PaymentMethod, TransactionType, TransactionOrigin, ExchangeRate, CashMovement } from '../types';
 import { DataService } from '../services/dataService';
 import { ProductFormModal } from '../components/ProductFormModal';
@@ -23,6 +23,10 @@ export const Purchases: React.FC<PurchasesProps> = ({ exchangeRate }) => {
 
   // --- Product Modal State ---
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+
+  // --- Supplier Modal State ---
+  const [isSupplierModalOpen, setIsSupplierModalOpen] = useState(false);
+  const [newSupplier, setNewSupplier] = useState({ name: '', phone: '', paymentType: 'Contado' });
 
   // --- Report Logic ---
   const [allMovements, setAllMovements] = useState<CashMovement[]>([]);
@@ -132,6 +136,23 @@ export const Purchases: React.FC<PurchasesProps> = ({ exchangeRate }) => {
       setIsProductModalOpen(false);
       // Auto add to cart for convenience
       addToCart(product);
+  };
+
+  const handleCreateSupplier = () => {
+    if (!newSupplier.name.trim()) return alert("El nombre del proveedor es obligatorio");
+    
+    const supplier: Supplier = {
+        id: `S${Date.now()}`,
+        name: newSupplier.name,
+        phone: newSupplier.phone,
+        paymentType: newSupplier.paymentType as 'Contado' | 'Crédito'
+    };
+
+    DataService.addSupplier(supplier);
+    setSuppliers(DataService.getSuppliers());
+    setSelectedSupplier(supplier.id); // Select new supplier
+    setIsSupplierModalOpen(false);
+    setNewSupplier({ name: '', phone: '', paymentType: 'Contado' }); // Reset form
   };
 
   const cartTotalUSD = cart.reduce((sum, item) => sum + (item.newCost * item.quantity), 0);
@@ -264,14 +285,24 @@ export const Purchases: React.FC<PurchasesProps> = ({ exchangeRate }) => {
                 </div>
                 <div>
                     <label className="text-xs font-semibold text-gray-500 mb-1 block">Proveedor</label>
-                    <select 
-                        className="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white"
-                        value={selectedSupplier}
-                        onChange={(e) => setSelectedSupplier(e.target.value)}
-                    >
-                        {suppliers.length === 0 && <option value="">Sin proveedores</option>}
-                        {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                    </select>
+                    <div className="flex gap-2">
+                        <select 
+                            className="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white"
+                            value={selectedSupplier}
+                            onChange={(e) => setSelectedSupplier(e.target.value)}
+                        >
+                            {suppliers.length === 0 && <option value="">Sin proveedores</option>}
+                            {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                        </select>
+                        <button 
+                            type="button"
+                            onClick={() => setIsSupplierModalOpen(true)}
+                            className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors"
+                            title="Nuevo Proveedor"
+                        >
+                            <UserPlus size={18} />
+                        </button>
+                    </div>
                 </div>
                 </div>
 
@@ -509,6 +540,64 @@ export const Purchases: React.FC<PurchasesProps> = ({ exchangeRate }) => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* New Supplier Modal */}
+      {isSupplierModalOpen && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center animate-fade-in">
+              <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl">
+                  <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                      <h2 className="text-lg font-bold text-gray-800">Nuevo Proveedor</h2>
+                      <button type="button" onClick={() => setIsSupplierModalOpen(false)} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
+                  </div>
+                  <div className="p-6 space-y-4">
+                      <div>
+                          <label className="block text-xs font-semibold text-gray-500 mb-1">Nombre Empresa / Proveedor</label>
+                          <div className="relative">
+                              <UserPlus className="absolute left-3 top-2.5 text-gray-400" size={18} />
+                              <input 
+                                  type="text" 
+                                  className="w-full pl-10 p-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                                  placeholder="Ej: Distribuidora Polar"
+                                  value={newSupplier.name}
+                                  onChange={(e) => setNewSupplier({...newSupplier, name: e.target.value})}
+                              />
+                          </div>
+                      </div>
+                      <div>
+                          <label className="block text-xs font-semibold text-gray-500 mb-1">Teléfono / Contacto</label>
+                          <div className="relative">
+                              <Phone className="absolute left-3 top-2.5 text-gray-400" size={18} />
+                              <input 
+                                  type="text" 
+                                  className="w-full pl-10 p-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                                  placeholder="Ej: 0414-1234567"
+                                  value={newSupplier.phone}
+                                  onChange={(e) => setNewSupplier({...newSupplier, phone: e.target.value})}
+                              />
+                          </div>
+                      </div>
+                      <div>
+                          <label className="block text-xs font-semibold text-gray-500 mb-1">Condición de Pago Habitual</label>
+                          <div className="relative">
+                              <CreditCard className="absolute left-3 top-2.5 text-gray-400" size={18} />
+                              <select 
+                                  className="w-full pl-10 p-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                                  value={newSupplier.paymentType}
+                                  onChange={(e) => setNewSupplier({...newSupplier, paymentType: e.target.value})}
+                              >
+                                  <option value="Contado">Contado</option>
+                                  <option value="Crédito">Crédito</option>
+                              </select>
+                          </div>
+                      </div>
+                  </div>
+                  <div className="p-5 border-t border-gray-100 flex justify-end gap-3 bg-gray-50">
+                      <button type="button" onClick={() => setIsSupplierModalOpen(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg font-medium text-sm">Cancelar</button>
+                      <button type="button" onClick={handleCreateSupplier} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm">Guardar Proveedor</button>
+                  </div>
+              </div>
+          </div>
       )}
 
       {/* Product Creation Modal (Reused) */}
