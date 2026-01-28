@@ -59,6 +59,8 @@ export const Purchases: React.FC<PurchasesProps> = ({ exchangeRate }) => {
         const mDate = new Date(m.date);
         const isPurchase = m.type === TransactionType.EGRESO && m.origin === TransactionOrigin.COMPRA;
         const inDateRange = mDate >= start && mDate <= end;
+        
+        // Filter logic: If ALL, match everything. If specific ID, match exact supplierId.
         const matchesSupplier = filterSupplier === 'ALL' || m.supplierId === filterSupplier;
 
         return isPurchase && inDateRange && matchesSupplier;
@@ -72,6 +74,13 @@ export const Purchases: React.FC<PurchasesProps> = ({ exchangeRate }) => {
         count: filtered.length
     };
   }, [allMovements, filterSupplier, startDate, endDate, exchangeRate]);
+
+  // Label for UI
+  const currentSupplierLabel = useMemo(() => {
+      if (filterSupplier === 'ALL') return '(Todos)';
+      const s = suppliers.find(sup => sup.id === filterSupplier);
+      return s ? `(${s.name})` : '(Desconocido)';
+  }, [filterSupplier, suppliers]);
 
 
   // --- New Purchase Processing ---
@@ -352,7 +361,7 @@ export const Purchases: React.FC<PurchasesProps> = ({ exchangeRate }) => {
                       <div className="flex items-center gap-2 px-2">
                           <Filter size={18} className="text-gray-400" />
                           <select 
-                              className="text-sm text-gray-600 outline-none bg-transparent"
+                              className="text-sm text-gray-600 outline-none bg-transparent cursor-pointer"
                               value={filterSupplier}
                               onChange={(e) => setFilterSupplier(e.target.value)}
                           >
@@ -369,7 +378,7 @@ export const Purchases: React.FC<PurchasesProps> = ({ exchangeRate }) => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                   <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 flex items-center justify-between">
                       <div>
-                          <p className="text-sm font-medium text-gray-500 mb-1">Total Comprado (Periodo)</p>
+                          <p className="text-sm font-medium text-gray-500 mb-1">Total Comprado {currentSupplierLabel}</p>
                           <h3 className="text-3xl font-bold text-gray-800">${purchaseReport.totalSpentUSD.toFixed(2)}</h3>
                           <p className="text-xs text-gray-400 mt-1">Estimado en USD</p>
                       </div>
@@ -407,7 +416,7 @@ export const Purchases: React.FC<PurchasesProps> = ({ exchangeRate }) => {
                           {purchaseReport.movements.length === 0 ? (
                               <tr>
                                   <td colSpan={4} className="px-6 py-12 text-center text-gray-400">
-                                      No se encontraron compras en este periodo para el proveedor seleccionado.
+                                      No se encontraron compras en este periodo con los filtros seleccionados.
                                   </td>
                               </tr>
                           ) : (

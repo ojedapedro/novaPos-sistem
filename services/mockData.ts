@@ -51,7 +51,7 @@ export const INITIAL_MOVEMENTS: CashMovement[] = [
   // Movimientos de Hoy (Venta V003 - Zelle)
   { id: 'M004', date: today.toISOString(), type: TransactionType.INGRESO, origin: TransactionOrigin.VENTA, method: PaymentMethod.ZELLE, amount: 45.0, currency: 'USD', reference: 'ZL-998877' },
 
-  // Movimiento de Hoy (Egreso - Pago Proveedor pequeño)
-  // Added supplierId to S001 for reporting testing
-  { id: 'M005', date: today.toISOString(), type: TransactionType.EGRESO, origin: TransactionOrigin.COMPRA, method: PaymentMethod.EFECTIVO_BS, amount: 500.0, currency: 'BS', reference: 'Pago Transporte', supplierId: 'S001' }
+  // Movimientos de Compra (Egresos) con supplierId para pruebas de filtro
+  { id: 'M005', date: today.toISOString(), type: TransactionType.EGRESO, origin: TransactionOrigin.COMPRA, method: PaymentMethod.EFECTIVO_BS, amount: 500.0, currency: 'BS', reference: 'Pago Transporte', supplierId: 'S001' },
+  { id: 'M006', date: yesterday.toISOString(), type: TransactionType.EGRESO, origin: TransactionOrigin.COMPRA, method: PaymentMethod.ZELLE, amount: 120.0, currency: 'USD', reference: 'Restock Arroz', supplierId: 'S002' }
 ];
