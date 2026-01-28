@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { LayoutDashboard, ShoppingCart, Package, DollarSign, Menu, Bell, Truck, Loader2 } from 'lucide-react';
+import { LayoutDashboard, ShoppingCart, Package, DollarSign, Menu, Bell, Truck, Loader2, Users } from 'lucide-react';
 import { Dashboard } from './pages/Dashboard';
 import { POS } from './pages/POS';
 import { Inventory } from './pages/Inventory';
 import { Transactions } from './pages/Transactions';
 import { Purchases } from './pages/Purchases';
+import { Suppliers } from './pages/Suppliers';
 import { ExchangeRate } from './types';
 import { DataService } from './services/dataService';
 
@@ -15,7 +16,7 @@ const MOCK_EXCHANGE_RATE: ExchangeRate = {
 };
 
 const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'pos' | 'purchases' | 'inventory' | 'transactions'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'pos' | 'purchases' | 'inventory' | 'transactions' | 'suppliers'>('dashboard');
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -34,6 +35,7 @@ const App: React.FC = () => {
       case 'purchases': return <Purchases exchangeRate={MOCK_EXCHANGE_RATE} />;
       case 'inventory': return <Inventory />;
       case 'transactions': return <Transactions />;
+      case 'suppliers': return <Suppliers />;
       default: return <Dashboard exchangeRate={MOCK_EXCHANGE_RATE} />;
     }
   };
@@ -89,6 +91,14 @@ const App: React.FC = () => {
           >
             <Package size={20} />
             <span>Inventario</span>
+          </button>
+
+          <button 
+             onClick={() => setActiveTab('suppliers')}
+             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === 'suppliers' ? 'bg-blue-50 text-blue-600 font-medium' : 'text-gray-500 hover:bg-gray-50'}`}
+          >
+            <Users size={20} />
+            <span>Proveedores</span>
           </button>
 
           <button 

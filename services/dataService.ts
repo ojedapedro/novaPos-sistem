@@ -141,10 +141,27 @@ export const DataService = {
     ApiService.sendAction('SYNC_INVENTORY', product);
   },
 
-  addSupplier: (supplier: Supplier) => {
-    const newSuppliers = [...cache.suppliers, supplier];
+  saveSupplier: (supplier: Supplier) => {
+    const index = cache.suppliers.findIndex((s: Supplier) => s.id === supplier.id);
+    const newSuppliers = [...cache.suppliers];
+    
+    if (index >= 0) {
+        newSuppliers[index] = supplier;
+    } else {
+        newSuppliers.push(supplier);
+    }
+    
     updateLocal(STORAGE_KEYS.SUPPLIERS, newSuppliers, 'suppliers');
-    // En el futuro, agregar sincronización con nube:
-    // ApiService.sendAction('SAVE_SUPPLIER', supplier);
+    
+    // Sync to Cloud
+    ApiService.sendAction('SAVE_SUPPLIER', supplier);
+  },
+
+  deleteSupplier: (supplierId: string) => {
+    const newSuppliers = cache.suppliers.filter((s: Supplier) => s.id !== supplierId);
+    updateLocal(STORAGE_KEYS.SUPPLIERS, newSuppliers, 'suppliers');
+    
+    // Sync to Cloud
+    ApiService.sendAction('DELETE_SUPPLIER', { id: supplierId });
   }
 };

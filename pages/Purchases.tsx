@@ -148,7 +148,7 @@ export const Purchases: React.FC<PurchasesProps> = ({ exchangeRate }) => {
         paymentType: newSupplier.paymentType as 'Contado' | 'Crédito'
     };
 
-    DataService.addSupplier(supplier);
+    DataService.saveSupplier(supplier);
     setSuppliers(DataService.getSuppliers());
     setSelectedSupplier(supplier.id); // Select new supplier
     setIsSupplierModalOpen(false);

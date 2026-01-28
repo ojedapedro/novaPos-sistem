@@ -73,8 +73,13 @@ function doPost(e) {
         savePurchase(ss, request.payload);
         break;
       case 'SYNC_INVENTORY':
-         // Lógica para actualizar un producto individual
          updateProduct(ss, request.payload);
+         break;
+      case 'SAVE_SUPPLIER':
+         saveSupplier(ss, request.payload);
+         break;
+      case 'DELETE_SUPPLIER':
+         deleteSupplier(ss, request.payload);
          break;
       default:
         result = { status: 'error', message: 'Acción desconocida' };
@@ -186,7 +191,6 @@ function updateStock(ss, items, isPurchase) {
 }
 
 function updateProduct(ss, product) {
-    // Implementar lógica para actualizar o crear un producto en la hoja 'Inventario'
     const sheet = ss.getSheetByName('Inventario');
     const data = sheet.getDataRange().getValues();
     let found = false;
@@ -211,5 +215,41 @@ function updateProduct(ss, product) {
              product.priceBuy, product.priceSell, product.stock, 
              product.minStock, product.active
         ]);
+    }
+}
+
+function saveSupplier(ss, supplier) {
+    const sheet = ss.getSheetByName('Proveedores');
+    const data = sheet.getDataRange().getValues();
+    let found = false;
+    
+    for(let i=1; i<data.length; i++) {
+        if(data[i][0] == supplier.id) {
+            // Actualizar (ID, Name, Phone, PaymentType)
+            sheet.getRange(i+1, 1, 1, 4).setValues([[
+                supplier.id, supplier.name, supplier.phone, supplier.paymentType
+            ]]);
+            found = true;
+            break;
+        }
+    }
+    
+    if(!found) {
+        sheet.appendRow([
+             supplier.id, supplier.name, supplier.phone, supplier.paymentType
+        ]);
+    }
+}
+
+function deleteSupplier(ss, payload) {
+    const sheet = ss.getSheetByName('Proveedores');
+    const data = sheet.getDataRange().getValues();
+    const id = payload.id;
+    
+    for(let i=1; i<data.length; i++) {
+        if(data[i][0] == id) {
+            sheet.deleteRow(i+1);
+            break;
+        }
     }
 }
