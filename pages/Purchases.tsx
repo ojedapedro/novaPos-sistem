@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Search, Plus, Minus, Trash2, Truck, X, Check, Save, FileText, Calendar, Filter, ArrowUpRight } from 'lucide-react';
+import { Search, Plus, Minus, Trash2, Truck, X, Check, Save, FileText, Calendar, Filter } from 'lucide-react';
 import { Product, PurchaseItem, Supplier, PaymentMethod, TransactionType, TransactionOrigin, ExchangeRate, CashMovement } from '../types';
 import { DataService } from '../services/dataService';
+import { ProductFormModal } from '../components/ProductFormModal';
 
 interface PurchasesProps {
   exchangeRate: ExchangeRate;
@@ -19,6 +20,9 @@ export const Purchases: React.FC<PurchasesProps> = ({ exchangeRate }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(PaymentMethod.EFECTIVO_USD);
   const [reference, setReference] = useState('');
+
+  // --- Product Modal State ---
+  const [isProductModalOpen, setIsProductModalOpen] = useState(false);
 
   // --- Report Logic ---
   const [allMovements, setAllMovements] = useState<CashMovement[]>([]);
@@ -113,6 +117,14 @@ export const Purchases: React.FC<PurchasesProps> = ({ exchangeRate }) => {
     setCart(prev => prev.filter(item => item.id !== id));
   };
 
+  const handleCreateProduct = (product: Product) => {
+      DataService.updateProduct(product);
+      setProducts(DataService.getProducts()); // Refresh list
+      setIsProductModalOpen(false);
+      // Optional: Auto add to cart?
+      addToCart(product);
+  };
+
   const cartTotalUSD = cart.reduce((sum, item) => sum + (item.newCost * item.quantity), 0);
   
   const processPurchase = () => {
@@ -170,19 +182,30 @@ export const Purchases: React.FC<PurchasesProps> = ({ exchangeRate }) => {
           <div className="flex flex-1 overflow-hidden">
             {/* Product Catalog */}
             <div className="w-2/3 p-6 overflow-y-auto custom-scrollbar">
-                <div className="mb-4">
-                    <h2 className="text-2xl font-bold text-gray-800 mb-2">Nueva Compra</h2>
-                    <p className="text-gray-500">Seleccione productos para reponer inventario.</p>
+                <div className="mb-4 flex justify-between items-start">
+                    <div>
+                        <h2 className="text-2xl font-bold text-gray-800 mb-1">Nueva Compra</h2>
+                        <p className="text-gray-500 text-sm">Seleccione productos para reponer inventario.</p>
+                    </div>
                 </div>
-                <div className="mb-6 relative">
-                <Search className="absolute left-3 top-3 text-gray-400" size={20} />
-                <input 
-                    type="text" 
-                    placeholder="Buscar productos..." 
-                    className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none shadow-sm"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                />
+                <div className="mb-6 flex gap-2">
+                    <div className="relative flex-1">
+                        <Search className="absolute left-3 top-3 text-gray-400" size={20} />
+                        <input 
+                            type="text" 
+                            placeholder="Buscar productos..." 
+                            className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none shadow-sm"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+                    <button 
+                        onClick={() => setIsProductModalOpen(true)}
+                        className="bg-white border border-gray-300 text-gray-700 px-4 rounded-xl hover:bg-gray-50 flex items-center gap-2 font-medium"
+                        title="Crear nuevo producto si no existe"
+                    >
+                        <Plus size={20} /> <span className="hidden sm:inline">Crear Producto</span>
+                    </button>
                 </div>
 
                 <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
@@ -216,9 +239,16 @@ export const Purchases: React.FC<PurchasesProps> = ({ exchangeRate }) => {
             {/* Purchase Cart Sidebar */}
             <div className="w-1/3 bg-white border-l border-gray-200 flex flex-col h-full shadow-xl">
                 <div className="p-5 border-b border-gray-100 bg-gray-50">
-                <div className="flex items-center gap-2 text-gray-700 mb-4">
-                    <Truck size={20} />
-                    <h2 className="font-bold text-lg">Orden de Compra</h2>
+                <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2 text-gray-700">
+                        <Truck size={20} />
+                        <h2 className="font-bold text-lg">Orden de Compra</h2>
+                    </div>
+                    {cart.length > 0 && (
+                        <button onClick={() => setCart([])} className="text-xs text-red-500 hover:underline">
+                            Limpiar
+                        </button>
+                    )}
                 </div>
                 <div>
                     <label className="text-xs font-semibold text-gray-500 mb-1 block">Proveedor</label>
@@ -466,6 +496,14 @@ export const Purchases: React.FC<PurchasesProps> = ({ exchangeRate }) => {
           </div>
         </div>
       )}
+
+      {/* Product Creation Modal (Reused) */}
+      <ProductFormModal 
+        isOpen={isProductModalOpen}
+        onClose={() => setIsProductModalOpen(false)}
+        onSave={handleCreateProduct}
+        existingIds={products.map(p => p.id)}
+      />
     </div>
   );
 };
