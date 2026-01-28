@@ -1,0 +1,5 @@
+{
+  "name": "NovaPOS - Sistema de Gestión",
+  "description": "Sistema integral de Punto de Venta (POS), Inventario y Caja con soporte multimoneda y estructura preparada para integración con Google Sheets.",
+  "requestFramePermissions": []
+}
