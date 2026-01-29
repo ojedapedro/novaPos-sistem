@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { LayoutDashboard, ShoppingCart, Package, DollarSign, Menu, Bell, Truck, Loader2, Users, RefreshCw } from 'lucide-react';
+import { LayoutDashboard, ShoppingCart, Package, DollarSign, Menu, Bell, Truck, Loader2, Users, RefreshCw, Wallet } from 'lucide-react';
 import { Dashboard } from './pages/Dashboard';
 import { POS } from './pages/POS';
 import { Inventory } from './pages/Inventory';
 import { Transactions } from './pages/Transactions';
 import { Purchases } from './pages/Purchases';
 import { Suppliers } from './pages/Suppliers';
+import { CashClose } from './pages/CashClose';
 import { ExchangeRate } from './types';
 import { DataService } from './services/dataService';
 
 const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'pos' | 'purchases' | 'inventory' | 'transactions' | 'suppliers'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'pos' | 'purchases' | 'inventory' | 'transactions' | 'suppliers' | 'cash_close'>('dashboard');
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   
@@ -58,6 +59,7 @@ const App: React.FC = () => {
       case 'inventory': return <Inventory />;
       case 'transactions': return <Transactions />;
       case 'suppliers': return <Suppliers />;
+      case 'cash_close': return <CashClose exchangeRate={exchangeRate} />;
       default: return <Dashboard exchangeRate={exchangeRate} />;
     }
   };
@@ -128,7 +130,15 @@ const App: React.FC = () => {
              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === 'transactions' ? 'bg-blue-50 text-blue-600 font-medium' : 'text-gray-500 hover:bg-gray-50'}`}
           >
             <DollarSign size={20} />
-            <span>Caja</span>
+            <span>Movimientos</span>
+          </button>
+
+          <button 
+             onClick={() => setActiveTab('cash_close')}
+             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${activeTab === 'cash_close' ? 'bg-blue-50 text-blue-600 font-medium' : 'text-gray-500 hover:bg-gray-50'}`}
+          >
+            <Wallet size={20} />
+            <span>Cierre de Caja</span>
           </button>
         </nav>
 
@@ -152,7 +162,8 @@ const App: React.FC = () => {
         {/* Header */}
         <header className="h-20 bg-white border-b border-gray-200 flex items-center justify-between px-8 z-10">
           <h1 className="text-xl font-bold text-gray-800 capitalize">
-            {activeTab === 'pos' ? 'Punto de Venta' : activeTab}
+            {activeTab === 'pos' ? 'Punto de Venta' : 
+             activeTab === 'cash_close' ? 'Cierre de Caja' : activeTab}
           </h1>
           
           <div className="flex items-center gap-4">
