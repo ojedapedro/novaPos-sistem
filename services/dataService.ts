@@ -193,5 +193,13 @@ export const DataService = {
     
     // Sync to Cloud
     ApiService.sendAction('DELETE_SUPPLIER', { id: supplierId });
+  },
+
+  saveClient: (client: Client) => {
+    const newClients = [...cache.clients, client];
+    updateLocal(STORAGE_KEYS.CLIENTS, newClients, 'clients');
+    
+    // Sync to Cloud
+    ApiService.sendAction('SAVE_CLIENT', client);
   }
 };

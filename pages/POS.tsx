@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Search, Plus, Minus, Trash2, ShoppingCart, CreditCard, X, Check, Edit2, RefreshCw, User, ChevronDown, FileText, Calendar, Filter, Eye, Package } from 'lucide-react';
+import { Search, Plus, Minus, Trash2, ShoppingCart, CreditCard, X, Check, Edit2, RefreshCw, User, ChevronDown, FileText, Calendar, Filter, Eye, Package, UserPlus, Phone } from 'lucide-react';
 import { Product, CartItem, Client, SaleType, SaleStatus, ExchangeRate, PaymentMethod, TransactionType, TransactionOrigin, SaleHeader, SaleDetail } from '../types';
 import { DataService } from '../services/dataService';
 
@@ -31,6 +31,11 @@ export const POS: React.FC<POSProps> = ({ exchangeRate, onUpdateExchangeRate }) 
     ref: ''
   });
   const [saleType, setSaleType] = useState<SaleType>(SaleType.CONTADO);
+
+  // --- New Client Modal State ---
+  const [isClientModalOpen, setIsClientModalOpen] = useState(false);
+  const [newClientName, setNewClientName] = useState('');
+  const [newClientPhone, setNewClientPhone] = useState('');
 
   // --- Report (History) State ---
   const [salesHistory, setSalesHistory] = useState<SaleHeader[]>([]);
@@ -120,6 +125,30 @@ export const POS: React.FC<POSProps> = ({ exchangeRate, onUpdateExchangeRate }) 
         onUpdateExchangeRate(newRate);
         setIsEditingRate(false);
     }
+  };
+
+  const handleCreateClient = () => {
+      if (!newClientName.trim()) {
+          alert("El nombre del cliente es obligatorio");
+          return;
+      }
+
+      const newClient: Client = {
+          id: `C${Date.now()}`,
+          name: newClientName,
+          phone: newClientPhone,
+          type: 'Frecuente'
+      };
+
+      DataService.saveClient(newClient);
+      const updatedClients = DataService.getClients();
+      setClients(updatedClients);
+      setSelectedClient(newClient.id); // Auto-select new client
+      
+      // Reset and close
+      setNewClientName('');
+      setNewClientPhone('');
+      setIsClientModalOpen(false);
   };
 
   const processSale = () => {
@@ -327,17 +356,26 @@ export const POS: React.FC<POSProps> = ({ exchangeRate, onUpdateExchangeRate }) 
                  {/* Client Selector */}
                  <div>
                     <label className="block text-xs font-semibold text-gray-500 mb-1">Cliente</label>
-                    <div className="relative">
-                       <User className="absolute left-3 top-2.5 text-gray-400 pointer-events-none" size={16} />
-                       <ChevronDown className="absolute right-3 top-2.5 text-gray-400 pointer-events-none" size={16} />
-                       <select 
-                         className="w-full pl-9 pr-8 p-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none appearance-none cursor-pointer hover:border-blue-300 transition-colors"
-                         value={selectedClient}
-                         onChange={(e) => setSelectedClient(e.target.value)}
-                       >
-                         <option value="" disabled>Seleccione un cliente</option>
-                         {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                       </select>
+                    <div className="flex gap-2">
+                        <div className="relative flex-1">
+                           <User className="absolute left-3 top-2.5 text-gray-400 pointer-events-none" size={16} />
+                           <ChevronDown className="absolute right-3 top-2.5 text-gray-400 pointer-events-none" size={16} />
+                           <select 
+                             className="w-full pl-9 pr-8 p-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none appearance-none cursor-pointer hover:border-blue-300 transition-colors"
+                             value={selectedClient}
+                             onChange={(e) => setSelectedClient(e.target.value)}
+                           >
+                             <option value="" disabled>Seleccione un cliente</option>
+                             {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                           </select>
+                        </div>
+                        <button 
+                            onClick={() => setIsClientModalOpen(true)}
+                            className="bg-blue-100 text-blue-600 p-2 rounded-lg hover:bg-blue-200 transition-colors"
+                            title="Nuevo Cliente"
+                        >
+                            <UserPlus size={18} />
+                        </button>
                     </div>
                  </div>
                </div>
@@ -645,6 +683,53 @@ export const POS: React.FC<POSProps> = ({ exchangeRate, onUpdateExchangeRate }) 
             </div>
           </div>
         </div>
+      )}
+
+      {/* New Client Modal */}
+      {isClientModalOpen && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center animate-fade-in">
+              <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl">
+                  <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                      <h2 className="text-lg font-bold text-gray-800">Nuevo Cliente</h2>
+                      <button onClick={() => setIsClientModalOpen(false)} className="text-gray-400 hover:text-gray-600 rounded-full p-1 hover:bg-gray-200 transition-colors">
+                          <X size={20} />
+                      </button>
+                  </div>
+                  <div className="p-6 space-y-4">
+                      <div>
+                          <label className="block text-xs font-semibold text-gray-500 mb-1">Nombre Completo</label>
+                          <div className="relative">
+                              <User className="absolute left-3 top-2.5 text-gray-400" size={18} />
+                              <input 
+                                  type="text" 
+                                  className="w-full pl-10 p-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                                  placeholder="Ej: María Pérez"
+                                  value={newClientName}
+                                  onChange={(e) => setNewClientName(e.target.value)}
+                                  autoFocus
+                              />
+                          </div>
+                      </div>
+                      <div>
+                          <label className="block text-xs font-semibold text-gray-500 mb-1">Teléfono (Opcional)</label>
+                          <div className="relative">
+                              <Phone className="absolute left-3 top-2.5 text-gray-400" size={18} />
+                              <input 
+                                  type="text" 
+                                  className="w-full pl-10 p-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                                  placeholder="Ej: 0412-1234567"
+                                  value={newClientPhone}
+                                  onChange={(e) => setNewClientPhone(e.target.value)}
+                              />
+                          </div>
+                      </div>
+                  </div>
+                  <div className="p-5 border-t border-gray-100 flex justify-end gap-3 bg-gray-50">
+                      <button onClick={() => setIsClientModalOpen(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg font-medium text-sm">Cancelar</button>
+                      <button onClick={handleCreateClient} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm">Guardar Cliente</button>
+                  </div>
+              </div>
+          </div>
       )}
 
       {/* Sale Detail Modal */}
