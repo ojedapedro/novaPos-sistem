@@ -76,7 +76,7 @@ const App: React.FC = () => {
   return (
     <div className="flex h-screen bg-gray-100 text-gray-800 font-sans">
       {/* Sidebar */}
-      <aside className="w-64 bg-white border-r border-gray-200 flex flex-col shadow-sm z-20">
+      <aside className="w-64 bg-white border-r border-gray-200 flex flex-col shadow-sm z-20 print:hidden">
         <div className="h-20 flex items-center px-8 border-b border-gray-100">
           <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center mr-3">
             <span className="text-white font-bold text-lg">N</span>
@@ -160,7 +160,7 @@ const App: React.FC = () => {
       {/* Main Content */}
       <main className="flex-1 flex flex-col overflow-hidden relative">
         {/* Header */}
-        <header className="h-20 bg-white border-b border-gray-200 flex items-center justify-between px-8 z-10">
+        <header className="h-20 bg-white border-b border-gray-200 flex items-center justify-between px-8 z-10 print:hidden">
           <h1 className="text-xl font-bold text-gray-800 capitalize">
             {activeTab === 'pos' ? 'Punto de Venta' : 
              activeTab === 'cash_close' ? 'Cierre de Caja' : activeTab}
@@ -189,7 +189,7 @@ const App: React.FC = () => {
         </header>
 
         {/* Dynamic Page Content */}
-        <div className="flex-1 overflow-auto bg-gray-50 custom-scrollbar relative">
+        <div className="flex-1 overflow-auto bg-gray-50 custom-scrollbar relative print:overflow-visible print:bg-white">
            {renderContent()}
         </div>
       </main>
