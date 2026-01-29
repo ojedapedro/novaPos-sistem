@@ -3,10 +3,12 @@ import { Search, Plus, User, Phone, CreditCard, Trash2, Edit2 } from 'lucide-rea
 import { Supplier } from '../types';
 import { DataService } from '../services/dataService';
 import { SupplierFormModal } from '../components/SupplierFormModal';
+import { useNotification } from '../context/NotificationContext';
 
 export const Suppliers: React.FC = () => {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const { showNotification } = useNotification();
   
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -38,6 +40,7 @@ export const Suppliers: React.FC = () => {
       if (confirm('¿Está seguro de eliminar este proveedor?')) {
           DataService.deleteSupplier(id);
           setSuppliers(DataService.getSuppliers());
+          showNotification('success', 'Proveedor eliminado correctamente');
       }
   };
 
@@ -45,6 +48,7 @@ export const Suppliers: React.FC = () => {
     DataService.saveSupplier(supplier);
     setSuppliers(DataService.getSuppliers());
     setIsModalOpen(false);
+    showNotification('success', 'Proveedor guardado correctamente');
   };
 
   return (

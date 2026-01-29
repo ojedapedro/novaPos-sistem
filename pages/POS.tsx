@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Search, Plus, Minus, Trash2, ShoppingCart, CreditCard, X, Check, Edit2, RefreshCw, User, ChevronDown, FileText, Calendar, Filter, Eye, Package, UserPlus, Phone } from 'lucide-react';
 import { Product, CartItem, Client, SaleType, SaleStatus, ExchangeRate, PaymentMethod, TransactionType, TransactionOrigin, SaleHeader, SaleDetail } from '../types';
 import { DataService } from '../services/dataService';
+import { useNotification } from '../context/NotificationContext';
 
 interface POSProps {
   exchangeRate: ExchangeRate;
@@ -10,6 +11,7 @@ interface POSProps {
 
 export const POS: React.FC<POSProps> = ({ exchangeRate, onUpdateExchangeRate }) => {
   const [activeTab, setActiveTab] = useState<'new' | 'report'>('new');
+  const { showNotification } = useNotification();
   
   // --- Common State ---
   const [clients, setClients] = useState<Client[]>([]);
@@ -72,11 +74,17 @@ export const POS: React.FC<POSProps> = ({ exchangeRate, onUpdateExchangeRate }) 
   }, [products, searchTerm]);
 
   const addToCart = (product: Product) => {
-    if (product.stock <= 0) return;
+    if (product.stock <= 0) {
+        showNotification('warning', `Stock insuficiente para ${product.name}`);
+        return;
+    }
     setCart(prev => {
       const existing = prev.find(item => item.id === product.id);
       if (existing) {
-        if (existing.quantity >= product.stock) return prev;
+        if (existing.quantity >= product.stock) {
+            showNotification('warning', 'No hay más unidades disponibles');
+            return prev;
+        }
         return prev.map(item => item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item);
       }
       return [...prev, { ...product, quantity: 1 }];
@@ -129,7 +137,7 @@ export const POS: React.FC<POSProps> = ({ exchangeRate, onUpdateExchangeRate }) 
 
   const handleCreateClient = () => {
       if (!newClientName.trim()) {
-          alert("El nombre del cliente es obligatorio");
+          showNotification('error', "El nombre del cliente es obligatorio");
           return;
       }
 
@@ -149,12 +157,13 @@ export const POS: React.FC<POSProps> = ({ exchangeRate, onUpdateExchangeRate }) 
       setNewClientName('');
       setNewClientPhone('');
       setIsClientModalOpen(false);
+      showNotification('success', "Cliente creado correctamente");
   };
 
   const processSale = () => {
     if (cart.length === 0) return;
     if (saleType === SaleType.CONTADO && remainingUSD > 0.01) {
-      alert("El pago está incompleto.");
+      showNotification('warning', "El pago está incompleto. Verifique los montos.");
       return;
     }
 
@@ -196,7 +205,7 @@ export const POS: React.FC<POSProps> = ({ exchangeRate, onUpdateExchangeRate }) 
     setProducts(DataService.getProducts());
     setSalesHistory(DataService.getSales());
     setSaleDetailsHistory(DataService.getSaleDetails());
-    alert("Venta procesada con éxito.");
+    showNotification('success', "Venta procesada con éxito.");
   };
 
   const createMovement = (refId: string, method: PaymentMethod, amount: number, currency: string) => ({

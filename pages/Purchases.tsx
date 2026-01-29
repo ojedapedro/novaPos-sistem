@@ -3,6 +3,7 @@ import { Search, Plus, Minus, Trash2, Truck, X, Check, Save, FileText, Calendar,
 import { Product, PurchaseItem, Supplier, PaymentMethod, TransactionType, TransactionOrigin, ExchangeRate, CashMovement, PurchaseHeader, PurchaseDetail } from '../types';
 import { DataService } from '../services/dataService';
 import { ProductFormModal } from '../components/ProductFormModal';
+import { useNotification } from '../context/NotificationContext';
 
 interface PurchasesProps {
   exchangeRate: ExchangeRate;
@@ -11,6 +12,7 @@ interface PurchasesProps {
 export const Purchases: React.FC<PurchasesProps> = ({ exchangeRate }) => {
   const [activeTab, setActiveTab] = useState<'new' | 'report'>('new');
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const { showNotification } = useNotification();
   
   // --- New Purchase Logic ---
   const [products, setProducts] = useState<Product[]>([]);
@@ -141,10 +143,14 @@ export const Purchases: React.FC<PurchasesProps> = ({ exchangeRate }) => {
       setProducts(DataService.getProducts());
       setIsProductModalOpen(false);
       addToCart(product);
+      showNotification('success', 'Producto creado y añadido');
   };
 
   const handleCreateSupplier = () => {
-    if (!newSupplier.name.trim()) return alert("El nombre del proveedor es obligatorio");
+    if (!newSupplier.name.trim()) {
+        showNotification('error', "El nombre del proveedor es obligatorio");
+        return;
+    }
     const supplier: Supplier = {
         id: `S${Date.now()}`,
         name: newSupplier.name,
@@ -156,13 +162,17 @@ export const Purchases: React.FC<PurchasesProps> = ({ exchangeRate }) => {
     setSelectedSupplier(supplier.id);
     setIsSupplierModalOpen(false);
     setNewSupplier({ name: '', phone: '', paymentType: 'Contado' });
+    showNotification('success', 'Proveedor creado exitosamente');
   };
 
   const cartTotalUSD = cart.reduce((sum, item) => sum + (item.newCost * item.quantity), 0);
   
   const processPurchase = () => {
     if (cart.length === 0) return;
-    if (!selectedSupplier) return alert("Seleccione un proveedor");
+    if (!selectedSupplier) {
+        showNotification('warning', "Seleccione un proveedor antes de continuar");
+        return;
+    }
 
     const supplierName = suppliers.find(s => s.id === selectedSupplier)?.name || 'Proveedor';
 
@@ -189,7 +199,7 @@ export const Purchases: React.FC<PurchasesProps> = ({ exchangeRate }) => {
     setPurchases(DataService.getPurchases()); // Refresh list
     setPurchaseDetails(DataService.getPurchaseDetails());
     setReference('');
-    alert("Compra registrada.");
+    showNotification('success', "Compra registrada exitosamente.");
   };
 
   return (

@@ -4,10 +4,12 @@ import { Product } from '../types';
 import { DataService } from '../services/dataService';
 import { ProductFormModal } from '../components/ProductFormModal';
 import { KardexModal } from '../components/KardexModal';
+import { useNotification } from '../context/NotificationContext';
 
 export const Inventory: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const { showNotification } = useNotification();
   
   // Estados para filtros
   const [showFilters, setShowFilters] = useState(false);
@@ -68,6 +70,7 @@ export const Inventory: React.FC = () => {
       DataService.updateProduct(product);
       setProducts(DataService.getProducts()); // Refresh local list
       setIsModalOpen(false);
+      showNotification('success', 'Producto guardado correctamente');
   };
 
   const clearFilters = () => {

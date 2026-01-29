@@ -9,16 +9,18 @@ import { Suppliers } from './pages/Suppliers';
 import { CashClose } from './pages/CashClose';
 import { ExchangeRate } from './types';
 import { DataService } from './services/dataService';
+import { NotificationProvider, useNotification } from './context/NotificationContext';
 
-const App: React.FC = () => {
+const AppContent: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'pos' | 'purchases' | 'inventory' | 'transactions' | 'suppliers' | 'cash_close'>('dashboard');
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
+  const { showNotification } = useNotification();
   
   // Exchange Rate State (Lifted up to manage globally)
   const [exchangeRate, setExchangeRate] = useState<ExchangeRate>({
-    usdToBs: 0.00,
-    eurToBs: 0.00
+    usdToBs: 45.50,
+    eurToBs: 48.20
   });
 
   useEffect(() => {
@@ -35,6 +37,7 @@ const App: React.FC = () => {
       ...prev,
       usdToBs: newRate
     }));
+    showNotification('info', `Tasa actualizada a ${newRate.toFixed(2)} Bs/$`);
   };
 
   const handleManualSync = async () => {
@@ -44,8 +47,10 @@ const App: React.FC = () => {
       await DataService.initialize();
       // Pequeño timeout para que el usuario perciba la acción si es muy rápida
       await new Promise(resolve => setTimeout(resolve, 800));
+      showNotification('success', 'Datos sincronizados correctamente con la nube');
     } catch (error) {
       console.error("Error syncing", error);
+      showNotification('error', 'Error al sincronizar datos');
     } finally {
       setIsSyncing(false);
     }
@@ -194,6 +199,14 @@ const App: React.FC = () => {
         </div>
       </main>
     </div>
+  );
+};
+
+const App: React.FC = () => {
+  return (
+    <NotificationProvider>
+      <AppContent />
+    </NotificationProvider>
   );
 };
 
