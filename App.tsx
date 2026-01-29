@@ -9,15 +9,15 @@ import { Suppliers } from './pages/Suppliers';
 import { ExchangeRate } from './types';
 import { DataService } from './services/dataService';
 
-// Global simulation of exchange rate
-const MOCK_EXCHANGE_RATE: ExchangeRate = {
-  usdToBs: 45.50,
-  eurToBs: 48.20
-};
-
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'pos' | 'purchases' | 'inventory' | 'transactions' | 'suppliers'>('dashboard');
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Exchange Rate State (Lifted up to manage globally)
+  const [exchangeRate, setExchangeRate] = useState<ExchangeRate>({
+    usdToBs: 0.00,
+    eurToBs: 0.00
+  });
 
   useEffect(() => {
     const initApp = async () => {
@@ -28,15 +28,22 @@ const App: React.FC = () => {
     initApp();
   }, []);
 
+  const handleUpdateExchangeRate = (newRate: number) => {
+    setExchangeRate(prev => ({
+      ...prev,
+      usdToBs: newRate
+    }));
+  };
+
   const renderContent = () => {
     switch (activeTab) {
-      case 'dashboard': return <Dashboard exchangeRate={MOCK_EXCHANGE_RATE} />;
-      case 'pos': return <POS exchangeRate={MOCK_EXCHANGE_RATE} />;
-      case 'purchases': return <Purchases exchangeRate={MOCK_EXCHANGE_RATE} />;
+      case 'dashboard': return <Dashboard exchangeRate={exchangeRate} />;
+      case 'pos': return <POS exchangeRate={exchangeRate} onUpdateExchangeRate={handleUpdateExchangeRate} />;
+      case 'purchases': return <Purchases exchangeRate={exchangeRate} />;
       case 'inventory': return <Inventory />;
       case 'transactions': return <Transactions />;
       case 'suppliers': return <Suppliers />;
-      default: return <Dashboard exchangeRate={MOCK_EXCHANGE_RATE} />;
+      default: return <Dashboard exchangeRate={exchangeRate} />;
     }
   };
 
@@ -115,11 +122,11 @@ const App: React.FC = () => {
             <p className="text-xs opacity-80 mb-1">Tasa del día</p>
             <div className="flex justify-between items-center">
               <span className="font-bold">USD</span>
-              <span className="font-mono">{MOCK_EXCHANGE_RATE.usdToBs.toFixed(2)} Bs</span>
+              <span className="font-mono">{exchangeRate.usdToBs.toFixed(2)} Bs</span>
             </div>
             <div className="flex justify-between items-center mt-1">
               <span className="font-bold">EUR</span>
-              <span className="font-mono">{MOCK_EXCHANGE_RATE.eurToBs.toFixed(2)} Bs</span>
+              <span className="font-mono">{exchangeRate.eurToBs.toFixed(2)} Bs</span>
             </div>
           </div>
         </div>

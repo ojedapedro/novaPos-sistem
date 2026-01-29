@@ -1,19 +1,24 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Search, Plus, Minus, Trash2, ShoppingCart, CreditCard, X, Check } from 'lucide-react';
+import { Search, Plus, Minus, Trash2, ShoppingCart, CreditCard, X, Check, Edit2, RefreshCw } from 'lucide-react';
 import { Product, CartItem, Client, SaleType, SaleStatus, ExchangeRate, PaymentMethod, TransactionType, TransactionOrigin } from '../types';
 import { DataService } from '../services/dataService';
 
 interface POSProps {
   exchangeRate: ExchangeRate;
+  onUpdateExchangeRate: (rate: number) => void;
 }
 
-export const POS: React.FC<POSProps> = ({ exchangeRate }) => {
+export const POS: React.FC<POSProps> = ({ exchangeRate, onUpdateExchangeRate }) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedClient, setSelectedClient] = useState<string>('C001'); // Default general client
   const [clients, setClients] = useState<Client[]>([]);
   
+  // Rate Edit State
+  const [isEditingRate, setIsEditingRate] = useState(false);
+  const [tempRate, setTempRate] = useState('');
+
   // Checkout Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [paymentDetails, setPaymentDetails] = useState({
@@ -29,7 +34,8 @@ export const POS: React.FC<POSProps> = ({ exchangeRate }) => {
   useEffect(() => {
     setProducts(DataService.getProducts());
     setClients(DataService.getClients());
-  }, []);
+    setTempRate(exchangeRate.usdToBs.toString());
+  }, [exchangeRate.usdToBs]);
 
   const filteredProducts = useMemo(() => {
     return products.filter(p => 
@@ -87,6 +93,14 @@ export const POS: React.FC<POSProps> = ({ exchangeRate }) => {
 
   const remainingUSD = Math.max(0, cartTotalUSD - totalPaidInUSD);
   const remainingBs = remainingUSD * exchangeRate.usdToBs;
+
+  const handleRateSave = () => {
+    const newRate = parseFloat(tempRate);
+    if (!isNaN(newRate) && newRate > 0) {
+        onUpdateExchangeRate(newRate);
+        setIsEditingRate(false);
+    }
+  };
 
   const processSale = () => {
     if (cart.length === 0) return;
@@ -213,6 +227,39 @@ export const POS: React.FC<POSProps> = ({ exchangeRate }) => {
             <ShoppingCart size={20} />
             <h2 className="font-bold text-lg">Carrito de Venta</h2>
           </div>
+          
+          {/* Rate Editor Widget */}
+          <div className="flex justify-between items-center mb-4 bg-blue-50 p-3 rounded-lg border border-blue-100">
+             <div className="flex items-center gap-2">
+                 <RefreshCw size={16} className="text-blue-600" />
+                 <span className="text-sm text-blue-800 font-medium">Tasa BCV/Paralelo:</span>
+             </div>
+             {isEditingRate ? (
+                 <div className="flex items-center gap-2">
+                     <input 
+                        type="number" 
+                        className="w-20 p-1 text-right text-sm border border-blue-300 rounded focus:outline-none"
+                        value={tempRate}
+                        onChange={(e) => setTempRate(e.target.value)}
+                        autoFocus
+                     />
+                     <button onClick={handleRateSave} className="p-1 text-green-600 hover:bg-green-100 rounded">
+                        <Check size={16} />
+                     </button>
+                     <button onClick={() => setIsEditingRate(false)} className="p-1 text-red-500 hover:bg-red-100 rounded">
+                        <X size={16} />
+                     </button>
+                 </div>
+             ) : (
+                 <div className="flex items-center gap-2">
+                     <span className="font-bold text-blue-900">{exchangeRate.usdToBs.toFixed(2)} Bs</span>
+                     <button onClick={() => setIsEditingRate(true)} className="p-1 text-blue-400 hover:text-blue-600 hover:bg-blue-100 rounded transition-colors" title="Editar Tasa">
+                        <Edit2 size={14} />
+                     </button>
+                 </div>
+             )}
+          </div>
+
           <select 
             className="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white"
             value={selectedClient}
