@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { LayoutDashboard, ShoppingCart, Package, DollarSign, Menu, Bell, Truck, Loader2, Users } from 'lucide-react';
+import { LayoutDashboard, ShoppingCart, Package, DollarSign, Menu, Bell, Truck, Loader2, Users, RefreshCw } from 'lucide-react';
 import { Dashboard } from './pages/Dashboard';
 import { POS } from './pages/POS';
 import { Inventory } from './pages/Inventory';
@@ -12,6 +12,7 @@ import { DataService } from './services/dataService';
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'pos' | 'purchases' | 'inventory' | 'transactions' | 'suppliers'>('dashboard');
   const [isLoading, setIsLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
   
   // Exchange Rate State (Lifted up to manage globally)
   const [exchangeRate, setExchangeRate] = useState<ExchangeRate>({
@@ -33,6 +34,20 @@ const App: React.FC = () => {
       ...prev,
       usdToBs: newRate
     }));
+  };
+
+  const handleManualSync = async () => {
+    if (isSyncing) return;
+    setIsSyncing(true);
+    try {
+      await DataService.initialize();
+      // Pequeño timeout para que el usuario perciba la acción si es muy rápida
+      await new Promise(resolve => setTimeout(resolve, 800));
+    } catch (error) {
+      console.error("Error syncing", error);
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
   const renderContent = () => {
@@ -141,6 +156,17 @@ const App: React.FC = () => {
           </h1>
           
           <div className="flex items-center gap-4">
+             {/* Sync Button */}
+             <button 
+                onClick={handleManualSync}
+                disabled={isSyncing}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border ${isSyncing ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-blue-600'}`}
+                title="Sincronizar datos con la nube"
+             >
+                <RefreshCw size={18} className={isSyncing ? 'animate-spin' : ''} />
+                <span className="hidden sm:inline">{isSyncing ? 'Sincronizando...' : 'Sincronizar'}</span>
+             </button>
+
              <button className="p-2 text-gray-400 hover:bg-gray-100 rounded-full relative">
                <Bell size={20} />
                <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>

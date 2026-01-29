@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Search, Plus, Minus, Trash2, ShoppingCart, CreditCard, X, Check, Edit2, RefreshCw } from 'lucide-react';
+import { Search, Plus, Minus, Trash2, ShoppingCart, CreditCard, X, Check, Edit2, RefreshCw, User, ChevronDown } from 'lucide-react';
 import { Product, CartItem, Client, SaleType, SaleStatus, ExchangeRate, PaymentMethod, TransactionType, TransactionOrigin } from '../types';
 import { DataService } from '../services/dataService';
 
@@ -12,7 +12,7 @@ export const POS: React.FC<POSProps> = ({ exchangeRate, onUpdateExchangeRate }) 
   const [products, setProducts] = useState<Product[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedClient, setSelectedClient] = useState<string>('C001'); // Default general client
+  const [selectedClient, setSelectedClient] = useState<string>('');
   const [clients, setClients] = useState<Client[]>([]);
   
   // Rate Edit State
@@ -33,7 +33,15 @@ export const POS: React.FC<POSProps> = ({ exchangeRate, onUpdateExchangeRate }) 
 
   useEffect(() => {
     setProducts(DataService.getProducts());
-    setClients(DataService.getClients());
+    const loadedClients = DataService.getClients();
+    setClients(loadedClients);
+    
+    // Select default client (C001 or First Available)
+    if (loadedClients.length > 0) {
+        const defaultClient = loadedClients.find(c => c.id === 'C001') || loadedClients[0];
+        setSelectedClient(defaultClient.id);
+    }
+
     setTempRate(exchangeRate.usdToBs.toString());
   }, [exchangeRate.usdToBs]);
 
@@ -260,13 +268,22 @@ export const POS: React.FC<POSProps> = ({ exchangeRate, onUpdateExchangeRate }) 
              )}
           </div>
 
-          <select 
-            className="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white"
-            value={selectedClient}
-            onChange={(e) => setSelectedClient(e.target.value)}
-          >
-            {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
+          {/* Client Selector */}
+          <div>
+             <label className="block text-xs font-semibold text-gray-500 mb-1">Cliente</label>
+             <div className="relative">
+                <User className="absolute left-3 top-2.5 text-gray-400 pointer-events-none" size={16} />
+                <ChevronDown className="absolute right-3 top-2.5 text-gray-400 pointer-events-none" size={16} />
+                <select 
+                  className="w-full pl-9 pr-8 p-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none appearance-none cursor-pointer hover:border-blue-300 transition-colors"
+                  value={selectedClient}
+                  onChange={(e) => setSelectedClient(e.target.value)}
+                >
+                  <option value="" disabled>Seleccione un cliente</option>
+                  {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+             </div>
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">

@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Search, Plus, Filter, AlertCircle, X, CheckCircle2, Ban, Edit2 } from 'lucide-react';
+import { Search, Plus, Filter, AlertCircle, X, CheckCircle2, Ban, Edit2, ClipboardList } from 'lucide-react';
 import { Product } from '../types';
 import { DataService } from '../services/dataService';
 import { ProductFormModal } from '../components/ProductFormModal';
+import { KardexModal } from '../components/KardexModal';
 
 export const Inventory: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -14,9 +15,13 @@ export const Inventory: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState('Todos');
   const [stockFilter, setStockFilter] = useState('Todos');
 
-  // Estados para Modal
+  // Estados para Modal Producto
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+
+  // Estados para Modal Kardex
+  const [isKardexOpen, setIsKardexOpen] = useState(false);
+  const [selectedProductForKardex, setSelectedProductForKardex] = useState<Product | null>(null);
 
   useEffect(() => {
     setProducts(DataService.getProducts());
@@ -52,6 +57,11 @@ export const Inventory: React.FC = () => {
   const handleEditProduct = (product: Product) => {
       setEditingProduct(product);
       setIsModalOpen(true);
+  };
+
+  const handleOpenKardex = (product: Product) => {
+      setSelectedProductForKardex(product);
+      setIsKardexOpen(true);
   };
 
   const handleSaveProduct = (product: Product) => {
@@ -181,13 +191,22 @@ export const Inventory: React.FC = () => {
                             }
                         </td>
                         <td className="p-4 text-center">
-                            <button 
-                                onClick={() => handleEditProduct(product)}
-                                className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                title="Editar Producto"
-                            >
-                                <Edit2 size={16} />
-                            </button>
+                            <div className="flex justify-center gap-2">
+                                <button 
+                                    onClick={() => handleOpenKardex(product)}
+                                    className="p-2 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                                    title="Ver Kardex (Movimientos)"
+                                >
+                                    <ClipboardList size={16} />
+                                </button>
+                                <button 
+                                    onClick={() => handleEditProduct(product)}
+                                    className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                    title="Editar Producto"
+                                >
+                                    <Edit2 size={16} />
+                                </button>
+                            </div>
                         </td>
                     </tr>
                     ))
@@ -203,6 +222,12 @@ export const Inventory: React.FC = () => {
         onSave={handleSaveProduct}
         initialData={editingProduct}
         existingIds={products.map(p => p.id)}
+      />
+
+      <KardexModal 
+        isOpen={isKardexOpen}
+        onClose={() => setIsKardexOpen(false)}
+        product={selectedProductForKardex}
       />
     </div>
   );
