@@ -70,22 +70,27 @@ export const POS: React.FC<POSProps> = ({ exchangeRate }) => {
   const cartTotalBs = cartTotalUSD * exchangeRate.usdToBs;
 
   const handlePaymentChange = (method: PaymentMethod, value: string) => {
-    const numVal = parseFloat(value) || 0;
-    setPaymentDetails(prev => ({ ...prev, [method]: numVal }));
+    const numVal = parseFloat(value);
+    setPaymentDetails(prev => ({ 
+        ...prev, 
+        [method]: isNaN(numVal) ? 0 : numVal 
+    }));
   };
 
   // Logic to calculate remaining amount in USD equivalent
   const totalPaidInUSD = 
-    paymentDetails[PaymentMethod.EFECTIVO_USD] +
-    (paymentDetails[PaymentMethod.EFECTIVO_BS] / exchangeRate.usdToBs) +
-    (paymentDetails[PaymentMethod.PAGO_MOVIL] / exchangeRate.usdToBs) +
-    paymentDetails[PaymentMethod.ZELLE] +
-    paymentDetails[PaymentMethod.CASHEA]; // Cashea typically processed in USD or fixed rate
+    (paymentDetails[PaymentMethod.EFECTIVO_USD] || 0) +
+    ((paymentDetails[PaymentMethod.EFECTIVO_BS] || 0) / exchangeRate.usdToBs) +
+    ((paymentDetails[PaymentMethod.PAGO_MOVIL] || 0) / exchangeRate.usdToBs) +
+    (paymentDetails[PaymentMethod.ZELLE] || 0) +
+    (paymentDetails[PaymentMethod.CASHEA] || 0);
 
   const remainingUSD = Math.max(0, cartTotalUSD - totalPaidInUSD);
+  const remainingBs = remainingUSD * exchangeRate.usdToBs;
 
   const processSale = () => {
     if (cart.length === 0) return;
+    // Allow a small margin of error for floating point comparisons (0.01)
     if (saleType === SaleType.CONTADO && remainingUSD > 0.01) {
       alert("El pago está incompleto.");
       return;
@@ -130,6 +135,14 @@ export const POS: React.FC<POSProps> = ({ exchangeRate }) => {
     // Reset
     setCart([]);
     setIsModalOpen(false);
+    setPaymentDetails({
+        [PaymentMethod.EFECTIVO_USD]: 0,
+        [PaymentMethod.EFECTIVO_BS]: 0,
+        [PaymentMethod.PAGO_MOVIL]: 0,
+        [PaymentMethod.ZELLE]: 0,
+        [PaymentMethod.CASHEA]: 0,
+        ref: ''
+    });
     setProducts(DataService.getProducts()); // Refresh stock display
     alert("Venta procesada con éxito.");
   };
@@ -294,7 +307,10 @@ export const POS: React.FC<POSProps> = ({ exchangeRate }) => {
                  {saleType === SaleType.CONTADO && (
                    <div className={`p-4 rounded-xl border ${remainingUSD > 0.01 ? 'bg-red-50 border-red-100 text-red-600' : 'bg-green-50 border-green-100 text-green-600'}`}>
                       <p className="text-sm font-medium mb-1">{remainingUSD > 0.01 ? 'Restante por Pagar' : 'Pago Completo'}</p>
-                      <div className="text-xl font-bold">${remainingUSD.toFixed(2)}</div>
+                      <div className="flex justify-between items-end">
+                          <div className="text-xl font-bold">${remainingUSD.toFixed(2)}</div>
+                          <div className="text-sm font-medium opacity-80">Bs. {remainingBs.toFixed(2)}</div>
+                      </div>
                    </div>
                  )}
               </div>
@@ -308,29 +324,68 @@ export const POS: React.FC<POSProps> = ({ exchangeRate }) => {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="text-xs text-gray-500 block mb-1">Efectivo USD ($)</label>
-                        <input type="number" className="w-full p-2 border rounded-lg" placeholder="0.00" 
-                          onChange={(e) => handlePaymentChange(PaymentMethod.EFECTIVO_USD, e.target.value)} />
+                        <input 
+                            type="number" 
+                            className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" 
+                            placeholder="0.00" 
+                            value={paymentDetails[PaymentMethod.EFECTIVO_USD] || ''}
+                            onChange={(e) => handlePaymentChange(PaymentMethod.EFECTIVO_USD, e.target.value)} 
+                        />
                       </div>
                       <div>
-                        <label className="text-xs text-gray-500 block mb-1">Efectivo Bs</label>
-                        <input type="number" className="w-full p-2 border rounded-lg" placeholder="0.00" 
-                           onChange={(e) => handlePaymentChange(PaymentMethod.EFECTIVO_BS, e.target.value)} />
+                        <div className="flex justify-between mb-1">
+                            <label className="text-xs text-gray-500">Efectivo Bs</label>
+                            {paymentDetails[PaymentMethod.EFECTIVO_BS] > 0 && (
+                                <span className="text-xs font-medium text-blue-600">
+                                    ${(paymentDetails[PaymentMethod.EFECTIVO_BS] / exchangeRate.usdToBs).toFixed(2)}
+                                </span>
+                            )}
+                        </div>
+                        <input 
+                            type="number" 
+                            className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" 
+                            placeholder="0.00" 
+                            value={paymentDetails[PaymentMethod.EFECTIVO_BS] || ''}
+                            onChange={(e) => handlePaymentChange(PaymentMethod.EFECTIVO_BS, e.target.value)} 
+                        />
                       </div>
                       <div>
-                        <label className="text-xs text-gray-500 block mb-1">Pago Móvil (Bs)</label>
-                        <input type="number" className="w-full p-2 border rounded-lg" placeholder="0.00" 
-                           onChange={(e) => handlePaymentChange(PaymentMethod.PAGO_MOVIL, e.target.value)} />
+                        <div className="flex justify-between mb-1">
+                            <label className="text-xs text-gray-500">Pago Móvil (Bs)</label>
+                            {paymentDetails[PaymentMethod.PAGO_MOVIL] > 0 && (
+                                <span className="text-xs font-medium text-blue-600">
+                                    ${(paymentDetails[PaymentMethod.PAGO_MOVIL] / exchangeRate.usdToBs).toFixed(2)}
+                                </span>
+                            )}
+                        </div>
+                        <input 
+                            type="number" 
+                            className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" 
+                            placeholder="0.00" 
+                            value={paymentDetails[PaymentMethod.PAGO_MOVIL] || ''}
+                            onChange={(e) => handlePaymentChange(PaymentMethod.PAGO_MOVIL, e.target.value)} 
+                        />
                       </div>
                       <div>
                         <label className="text-xs text-gray-500 block mb-1">Zelle ($)</label>
-                        <input type="number" className="w-full p-2 border rounded-lg" placeholder="0.00" 
-                           onChange={(e) => handlePaymentChange(PaymentMethod.ZELLE, e.target.value)} />
+                        <input 
+                            type="number" 
+                            className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" 
+                            placeholder="0.00" 
+                            value={paymentDetails[PaymentMethod.ZELLE] || ''}
+                            onChange={(e) => handlePaymentChange(PaymentMethod.ZELLE, e.target.value)} 
+                        />
                       </div>
                     </div>
                     <div>
                       <label className="text-xs text-gray-500 block mb-1">Referencia (Opcional)</label>
-                      <input type="text" className="w-full p-2 border rounded-lg" placeholder="Ref: 123456" 
-                        onChange={(e) => setPaymentDetails(prev => ({...prev, ref: e.target.value}))} />
+                      <input 
+                        type="text" 
+                        className="w-full p-2 border rounded-lg" 
+                        placeholder="Ref: 123456" 
+                        value={paymentDetails.ref}
+                        onChange={(e) => setPaymentDetails(prev => ({...prev, ref: e.target.value}))} 
+                      />
                     </div>
                   </>
                 ) : (
