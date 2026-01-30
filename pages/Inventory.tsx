@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Search, Plus, Filter, AlertCircle, X, CheckCircle2, Ban, Edit2, ClipboardList, Barcode, Upload } from 'lucide-react';
+import { Search, Plus, Filter, AlertCircle, X, CheckCircle2, Ban, Edit2, ClipboardList, Barcode } from 'lucide-react';
 import { Product } from '../types';
 import { DataService } from '../services/dataService';
 import { ProductFormModal } from '../components/ProductFormModal';
 import { KardexModal } from '../components/KardexModal';
-import { BatchUploadModal } from '../components/BatchUploadModal';
 import { useNotification } from '../context/NotificationContext';
 
 export const Inventory: React.FC = () => {
@@ -26,9 +25,6 @@ export const Inventory: React.FC = () => {
   // Estados para Modal Kardex
   const [isKardexOpen, setIsKardexOpen] = useState(false);
   const [selectedProductForKardex, setSelectedProductForKardex] = useState<Product | null>(null);
-
-  // Estados para Carga Masiva
-  const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
 
   useEffect(() => {
     setProducts(DataService.getProducts());
@@ -79,10 +75,6 @@ export const Inventory: React.FC = () => {
       showNotification('success', 'Producto guardado correctamente');
   };
   
-  const handleBatchSuccess = () => {
-      setProducts(DataService.getProducts()); // Refresh list after import
-  };
-
   const clearFilters = () => {
     setSearchTerm('');
     setCategoryFilter('Todas');
@@ -109,12 +101,6 @@ export const Inventory: React.FC = () => {
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold text-gray-800">Inventario</h2>
         <div className="flex gap-2">
-            <button 
-                onClick={() => setIsBatchModalOpen(true)}
-                className="bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-gray-50 shadow-sm transition-colors font-medium"
-            >
-              <Upload size={18} /> <span className="hidden sm:inline">Carga Masiva</span>
-            </button>
             <button 
                 onClick={handleNewProduct}
                 className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700 shadow-sm transition-colors font-medium"
@@ -269,12 +255,6 @@ export const Inventory: React.FC = () => {
         isOpen={isKardexOpen}
         onClose={() => setIsKardexOpen(false)}
         product={selectedProductForKardex}
-      />
-
-      <BatchUploadModal 
-        isOpen={isBatchModalOpen}
-        onClose={() => setIsBatchModalOpen(false)}
-        onSuccess={handleBatchSuccess}
       />
     </div>
   );
