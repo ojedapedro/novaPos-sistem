@@ -171,6 +171,30 @@ export const DataService = {
     ApiService.sendAction('SYNC_INVENTORY', product);
   },
 
+  // Batch import optimization to avoid writing to storage N times
+  importBatchProducts: (products: Product[]) => {
+    let newProducts = [...cache.products];
+    const productsMap = new Map(newProducts.map(p => [p.id, p]));
+
+    products.forEach(p => {
+        if (productsMap.has(p.id)) {
+            // Update existing
+            const index = newProducts.findIndex(existing => existing.id === p.id);
+            if (index !== -1) newProducts[index] = p;
+        } else {
+            // Add new
+            newProducts.push(p);
+        }
+    });
+
+    updateLocal(STORAGE_KEYS.PRODUCTS, newProducts, 'products');
+    
+    // Note: For simplicity in this demo, we are NOT sending batch sync to API 
+    // to avoid complexity with the Apps Script POST handling. 
+    // In a production app, you would send { action: 'BATCH_SYNC', payload: products }
+    console.log(`Imported ${products.length} products locally.`);
+  },
+
   saveSupplier: (supplier: Supplier) => {
     const index = cache.suppliers.findIndex((s: Supplier) => s.id === supplier.id);
     const newSuppliers = [...cache.suppliers];
