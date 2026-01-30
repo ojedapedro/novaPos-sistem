@@ -32,15 +32,31 @@ const updateLocal = (key: string, data: any, cacheKey: string) => {
   localStorage.setItem(key, JSON.stringify(data));
 };
 
+// Robust JSON parsing to prevent app crash on white screen
+const safeParse = (key: string, fallback: any) => {
+  try {
+    const item = localStorage.getItem(key);
+    // If item is "undefined" string or null, use fallback
+    if (!item || item === 'undefined') return fallback;
+    return JSON.parse(item);
+  } catch (error) {
+    console.error(`Error loading ${key} from storage. Resetting to default.`, error);
+    // Remove corrupt data
+    localStorage.removeItem(key);
+    return fallback;
+  }
+};
+
 const loadFromStorage = () => {
-  cache.products = JSON.parse(localStorage.getItem(STORAGE_KEYS.PRODUCTS) || JSON.stringify(INITIAL_PRODUCTS));
-  cache.clients = JSON.parse(localStorage.getItem(STORAGE_KEYS.CLIENTS) || JSON.stringify(INITIAL_CLIENTS));
-  cache.suppliers = JSON.parse(localStorage.getItem(STORAGE_KEYS.SUPPLIERS) || JSON.stringify(INITIAL_SUPPLIERS));
-  cache.sales = JSON.parse(localStorage.getItem(STORAGE_KEYS.SALES_HEADER) || JSON.stringify(INITIAL_SALES));
-  cache.details = JSON.parse(localStorage.getItem(STORAGE_KEYS.SALES_DETAIL) || JSON.stringify(INITIAL_DETAILS));
-  cache.purchases = JSON.parse(localStorage.getItem(STORAGE_KEYS.PURCHASES_HEADER) || JSON.stringify(INITIAL_PURCHASES));
-  cache.purchaseDetails = JSON.parse(localStorage.getItem(STORAGE_KEYS.PURCHASES_DETAIL) || JSON.stringify(INITIAL_PURCHASE_DETAILS));
-  cache.movements = JSON.parse(localStorage.getItem(STORAGE_KEYS.MOVEMENTS) || JSON.stringify(INITIAL_MOVEMENTS));
+  // Use safeParse to ensure the app never crashes on load due to bad data
+  cache.products = safeParse(STORAGE_KEYS.PRODUCTS, INITIAL_PRODUCTS);
+  cache.clients = safeParse(STORAGE_KEYS.CLIENTS, INITIAL_CLIENTS);
+  cache.suppliers = safeParse(STORAGE_KEYS.SUPPLIERS, INITIAL_SUPPLIERS);
+  cache.sales = safeParse(STORAGE_KEYS.SALES_HEADER, INITIAL_SALES);
+  cache.details = safeParse(STORAGE_KEYS.SALES_DETAIL, INITIAL_DETAILS);
+  cache.purchases = safeParse(STORAGE_KEYS.PURCHASES_HEADER, INITIAL_PURCHASES);
+  cache.purchaseDetails = safeParse(STORAGE_KEYS.PURCHASES_DETAIL, INITIAL_PURCHASE_DETAILS);
+  cache.movements = safeParse(STORAGE_KEYS.MOVEMENTS, INITIAL_MOVEMENTS);
 };
 
 // Initial load
@@ -189,9 +205,6 @@ export const DataService = {
 
     updateLocal(STORAGE_KEYS.PRODUCTS, newProducts, 'products');
     
-    // Note: For simplicity in this demo, we are NOT sending batch sync to API 
-    // to avoid complexity with the Apps Script POST handling. 
-    // In a production app, you would send { action: 'BATCH_SYNC', payload: products }
     console.log(`Imported ${products.length} products locally.`);
   },
 
