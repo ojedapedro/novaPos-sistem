@@ -150,7 +150,10 @@ export const MovementReport: React.FC = () => {
       <div className="p-6 flex-1 overflow-auto custom-scrollbar">
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-8">
-            {Object.entries(summaryByCurrency).map(([currency, data]) => (
+            {Object.entries(summaryByCurrency).map(([currency, rawData]) => {
+                // Explicit casting to satisfy Typescript when mapping Object.entries
+                const data = rawData as { income: number; expense: number; balance: number };
+                return (
                 <div key={currency} className="bg-white p-5 rounded-xl shadow-sm border border-gray-200 flex flex-col justify-between">
                     <div className="flex justify-between items-start mb-4">
                         <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs font-bold">{currency}</span>
@@ -174,7 +177,7 @@ export const MovementReport: React.FC = () => {
                         </div>
                     </div>
                 </div>
-            ))}
+            )})}
             {Object.keys(summaryByCurrency).length === 0 && (
                 <div className="col-span-full text-center py-8 text-gray-400 bg-white rounded-xl border border-dashed border-gray-200">
                     No hay movimientos para mostrar en el resumen.

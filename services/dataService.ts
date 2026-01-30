@@ -36,8 +36,8 @@ const updateLocal = (key: string, data: any, cacheKey: string) => {
 const safeParse = (key: string, fallback: any) => {
   try {
     const item = localStorage.getItem(key);
-    // If item is "undefined" string or null, use fallback
-    if (!item || item === 'undefined') return fallback;
+    // If item is "undefined" string, null, or empty, use fallback
+    if (!item || item === 'undefined' || item === 'null') return fallback;
     return JSON.parse(item);
   } catch (error) {
     console.error(`Error loading ${key} from storage. Resetting to default.`, error);
@@ -89,14 +89,14 @@ export const DataService = {
   },
 
   // Getters return from memory cache (Sync, fast)
-  getProducts: (): Product[] => cache.products,
-  getClients: (): Client[] => cache.clients,
-  getSuppliers: (): Supplier[] => cache.suppliers,
-  getSales: (): SaleHeader[] => cache.sales,
-  getSaleDetails: (): SaleDetail[] => cache.details,
-  getPurchases: (): PurchaseHeader[] => cache.purchases,
-  getPurchaseDetails: (): PurchaseDetail[] => cache.purchaseDetails,
-  getMovements: (): CashMovement[] => cache.movements,
+  getProducts: (): Product[] => cache.products || [],
+  getClients: (): Client[] => cache.clients || [],
+  getSuppliers: (): Supplier[] => cache.suppliers || [],
+  getSales: (): SaleHeader[] => cache.sales || [],
+  getSaleDetails: (): SaleDetail[] => cache.details || [],
+  getPurchases: (): PurchaseHeader[] => cache.purchases || [],
+  getPurchaseDetails: (): PurchaseDetail[] => cache.purchaseDetails || [],
+  getMovements: (): CashMovement[] => cache.movements || [],
 
   // Setters update Cache -> LocalStorage -> Async API Call
   saveSale: (header: SaleHeader, details: SaleDetail[], movements: CashMovement[]) => {
