@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Search, Plus, Minus, Trash2, Truck, X, Check, Save, FileText, Calendar, Filter, UserPlus, Phone, CreditCard, Eye, Package } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { Search, Plus, Minus, Trash2, Truck, X, Check, Save, FileText, Calendar, Filter, UserPlus, Phone, CreditCard, Eye, Package, Barcode } from 'lucide-react';
 import { Product, PurchaseItem, Supplier, PaymentMethod, TransactionType, TransactionOrigin, ExchangeRate, CashMovement, PurchaseHeader, PurchaseDetail } from '../types';
 import { DataService } from '../services/dataService';
 import { ProductFormModal } from '../components/ProductFormModal';
@@ -13,6 +13,7 @@ export const Purchases: React.FC<PurchasesProps> = ({ exchangeRate }) => {
   const [activeTab, setActiveTab] = useState<'new' | 'report'>('new');
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const { showNotification } = useNotification();
+  const searchInputRef = useRef<HTMLInputElement>(null);
   
   // --- New Purchase Logic ---
   const [products, setProducts] = useState<Product[]>([]);
@@ -50,6 +51,13 @@ export const Purchases: React.FC<PurchasesProps> = ({ exchangeRate }) => {
         setSelectedSupplier(loadedSuppliers[0].id);
     }
   }, []);
+  
+  // Auto-focus logic
+  useEffect(() => {
+      if (activeTab === 'new') {
+          setTimeout(() => searchInputRef.current?.focus(), 100);
+      }
+  }, [activeTab]);
 
   // --- Helper: Conversion ---
   const toUSD = (amount: number, currency: string) => {
@@ -97,10 +105,12 @@ export const Purchases: React.FC<PurchasesProps> = ({ exchangeRate }) => {
 
   // --- New Purchase Processing ---
   const filteredProducts = useMemo(() => {
+    const term = searchTerm.toLowerCase();
     return products.filter(p => 
       p.active && 
-      (p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-       p.category.toLowerCase().includes(searchTerm.toLowerCase()))
+      (p.name.toLowerCase().includes(term) || 
+       p.category.toLowerCase().includes(term) ||
+       p.id.toLowerCase().includes(term))
     );
   }, [products, searchTerm]);
 
@@ -112,6 +122,23 @@ export const Purchases: React.FC<PurchasesProps> = ({ exchangeRate }) => {
       }
       return [...prev, { ...product, quantity: 1, newCost: product.priceBuy }];
     });
+  };
+
+  // --- Barcode Logic ---
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && searchTerm.trim()) {
+        const exactMatch = products.find(p => p.id.toLowerCase() === searchTerm.toLowerCase());
+        
+        if (exactMatch) {
+            addToCart(exactMatch);
+            setSearchTerm('');
+            showNotification('success', 'Producto agregado a la orden');
+        } else {
+            // Can be used to open create modal if not found?
+            // For now just warn
+            showNotification('warning', 'Producto no encontrado en inventario');
+        }
+    }
   };
 
   const updateQuantity = (id: string, delta: number) => {
@@ -200,6 +227,8 @@ export const Purchases: React.FC<PurchasesProps> = ({ exchangeRate }) => {
     setPurchaseDetails(DataService.getPurchaseDetails());
     setReference('');
     showNotification('success', "Compra registrada exitosamente.");
+    
+    setTimeout(() => searchInputRef.current?.focus(), 100);
   };
 
   return (
@@ -236,12 +265,17 @@ export const Purchases: React.FC<PurchasesProps> = ({ exchangeRate }) => {
                     <div className="relative flex-1">
                         <Search className="absolute left-3 top-3 text-gray-400" size={20} />
                         <input 
+                            ref={searchInputRef}
                             type="text" 
-                            placeholder="Buscar productos..." 
-                            className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none shadow-sm"
+                            placeholder="Buscar o escanear código..." 
+                            className="w-full pl-10 pr-10 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none shadow-sm"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
+                            onKeyDown={handleKeyDown}
                         />
+                         <div className="absolute right-3 top-3 text-gray-400 pointer-events-none">
+                             <Barcode size={20} />
+                         </div>
                     </div>
                     <button 
                         type="button"
@@ -266,6 +300,7 @@ export const Purchases: React.FC<PurchasesProps> = ({ exchangeRate }) => {
                         <span className="text-xs font-bold text-gray-500">Stock: {product.stock}</span>
                         </div>
                         <h3 className="font-semibold text-gray-800 mb-1 leading-tight">{product.name}</h3>
+                        <div className="text-xs text-gray-400 font-mono mt-1">{product.id}</div>
                     </div>
                     <div className="mt-3 flex justify-between items-end">
                         <div>

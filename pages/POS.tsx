@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Search, Plus, Minus, Trash2, ShoppingCart, CreditCard, X, Check, Edit2, RefreshCw, User, ChevronDown, FileText, Calendar, Filter, Eye, Package, UserPlus, Phone } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { Search, Plus, Minus, Trash2, ShoppingCart, CreditCard, X, Check, Edit2, RefreshCw, User, ChevronDown, FileText, Calendar, Filter, Eye, Package, UserPlus, Phone, Barcode } from 'lucide-react';
 import { Product, CartItem, Client, SaleType, SaleStatus, ExchangeRate, PaymentMethod, TransactionType, TransactionOrigin, SaleHeader, SaleDetail } from '../types';
 import { DataService } from '../services/dataService';
 import { useNotification } from '../context/NotificationContext';
@@ -12,6 +12,7 @@ interface POSProps {
 export const POS: React.FC<POSProps> = ({ exchangeRate, onUpdateExchangeRate }) => {
   const [activeTab, setActiveTab] = useState<'new' | 'report'>('new');
   const { showNotification } = useNotification();
+  const searchInputRef = useRef<HTMLInputElement>(null);
   
   // --- Common State ---
   const [clients, setClients] = useState<Client[]>([]);
@@ -62,14 +63,21 @@ export const POS: React.FC<POSProps> = ({ exchangeRate, onUpdateExchangeRate }) 
     }
 
     setTempRate(exchangeRate.usdToBs.toString());
-  }, [exchangeRate.usdToBs]);
+    
+    // Auto-focus search input on load
+    if (activeTab === 'new') {
+        setTimeout(() => searchInputRef.current?.focus(), 100);
+    }
+  }, [exchangeRate.usdToBs, activeTab]);
 
   // --- POS Logic ---
   const filteredProducts = useMemo(() => {
+    const term = searchTerm.toLowerCase();
     return products.filter(p => 
       p.active && 
-      (p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-       p.category.toLowerCase().includes(searchTerm.toLowerCase()))
+      (p.name.toLowerCase().includes(term) || 
+       p.category.toLowerCase().includes(term) ||
+       p.id.toLowerCase().includes(term)) // Allow search by ID in list
     );
   }, [products, searchTerm]);
 
@@ -89,6 +97,30 @@ export const POS: React.FC<POSProps> = ({ exchangeRate, onUpdateExchangeRate }) 
       }
       return [...prev, { ...product, quantity: 1 }];
     });
+  };
+
+  // --- Barcode Scanner Logic ---
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && searchTerm.trim()) {
+      // Find exact match by ID (Barcode)
+      const exactMatch = products.find(p => p.id.toLowerCase() === searchTerm.toLowerCase());
+      
+      if (exactMatch) {
+        if (exactMatch.active) {
+            addToCart(exactMatch);
+            setSearchTerm(''); // Clear input for next scan
+            showNotification('success', 'Producto agregado');
+        } else {
+            showNotification('error', 'Producto inactivo');
+        }
+      } else {
+        // Optional: If no exact ID match, maybe add the first result if it's a very specific search?
+        // For safety in POS, better to warn if not found.
+        if (filteredProducts.length === 0) {
+            showNotification('warning', 'Producto no encontrado');
+        }
+      }
+    }
   };
 
   const updateQuantity = (id: string, delta: number) => {
@@ -206,6 +238,9 @@ export const POS: React.FC<POSProps> = ({ exchangeRate, onUpdateExchangeRate }) 
     setSalesHistory(DataService.getSales());
     setSaleDetailsHistory(DataService.getSaleDetails());
     showNotification('success', "Venta procesada con éxito.");
+    
+    // Refocus for next sale
+    setTimeout(() => searchInputRef.current?.focus(), 100);
   };
 
   const createMovement = (refId: string, method: PaymentMethod, amount: number, currency: string) => ({
@@ -281,12 +316,18 @@ export const POS: React.FC<POSProps> = ({ exchangeRate, onUpdateExchangeRate }) 
                <div className="mb-6 relative">
                  <Search className="absolute left-3 top-3 text-gray-400" size={20} />
                  <input 
+                   ref={searchInputRef}
                    type="text" 
-                   placeholder="Buscar productos por nombre o categoría..." 
+                   placeholder="Buscar o escanear código de barras..." 
                    className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none shadow-sm"
                    value={searchTerm}
                    onChange={(e) => setSearchTerm(e.target.value)}
+                   onKeyDown={handleKeyDown}
+                   autoFocus
                  />
+                 <div className="absolute right-3 top-3 text-gray-400 pointer-events-none">
+                     <Barcode size={20} />
+                 </div>
                </div>
        
                <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
@@ -304,6 +345,7 @@ export const POS: React.FC<POSProps> = ({ exchangeRate, onUpdateExchangeRate }) 
                          </span>
                        </div>
                        <h3 className="font-semibold text-gray-800 mb-1 leading-tight">{product.name}</h3>
+                       <div className="text-xs text-gray-400 font-mono mt-1">{product.id}</div>
                      </div>
                      <div className="mt-3 flex justify-between items-end">
                        <div>
@@ -392,8 +434,8 @@ export const POS: React.FC<POSProps> = ({ exchangeRate, onUpdateExchangeRate }) 
                <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
                  {cart.length === 0 ? (
                    <div className="text-center text-gray-400 mt-10">
-                     <ShoppingCart size={48} className="mx-auto mb-3 opacity-20" />
-                     <p>El carrito está vacío</p>
+                     <Barcode size={48} className="mx-auto mb-3 opacity-20" />
+                     <p>Escanee un producto para empezar</p>
                    </div>
                  ) : (
                    cart.map(item => (
